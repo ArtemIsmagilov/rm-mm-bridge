@@ -1,0 +1,6 @@
+.docker.env
+mm-logs
+venv
+storage
+.idea
+__pycache__
