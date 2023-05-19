@@ -94,7 +94,7 @@
 * добавляем уведомление по почте (пример настройки можно посмотреть в config docker контейнера redmine,
   предварительно войдите в оболочку контейнера)
   ```shell
-  docker exec -it `conteiner_name` bash
+  docker exec -it `container_name` bash
   ``` 
   пример находится по следующему пути `config/configuration.yml.example`.
 * итак, добавляем.
