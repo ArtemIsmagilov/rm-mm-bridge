@@ -1,5 +1,0 @@
-requests
-Flask
-python-dotenv
-python-redmine
-mattermostdriver
