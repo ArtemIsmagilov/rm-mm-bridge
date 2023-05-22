@@ -435,8 +435,9 @@ def create_issues_submit():
         return {'type': 'error', 'text': '## Invalid format end date. Look for example [day.month.year] - 10.8.23.'}
     except ValidationDateError:
         return {'type': 'error', 'text': '## Due date must be greater than start date'}
+    
+    redmine_users = []
     with Redmine(f'http://{REDMINE_HOST}:{REDMINE_PORT}', key=ADMIN_REDMINE_KEY_API).session() as redmine:
-        redmine_users = []
         for u in parsed_data:
             with redmine.session(impersonate=u.login):
                 try:
@@ -454,18 +455,17 @@ def create_issues_submit():
                 redmine_user.created_date_end = u.date_end
                 redmine_users.append(redmine_user)
 
-            tickets = []
-            for t in redmine_users:
-                ticket = redmine.issue.create(
-                    project_id=project_id,
-                    subject=f'@{username} create ticket for @{t.login}',
-                    description=t.created_task,
-                    assigned_to_id=t.id,
-                    start_date=date_today,
-                    due_date=t.created_date_end,
-                )
+    tickets = [
+        redmine.issue.create(
+            project_id=project_id,
+            subject=f'@{username} create ticket for @{t.login}',
+            description=t.created_task,
+            assigned_to_id=t.id,
+            start_date=date_today,
+            due_date=t.created_date_end,
+        )
+        for t in redmine_users]
 
-                tickets.append(ticket)
     bot = Driver({
         'url': MATTERMOST_HOST,
         'token': REDMINE_MATTERMOST_BRIDGE_APP_TOKEN,
