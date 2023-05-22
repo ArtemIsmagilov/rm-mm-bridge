@@ -454,10 +454,10 @@ def create_issues_submit():
                 redmine_user.created_task = u.task
                 redmine_user.created_date_end = u.date_end
                 redmine_users.append(redmine_user)
-
-        for t in redmine_users:
-            with redmine.session(impersonate=t.login):
-                redmine.issue.create(
+        tickets = []
+        with redmine.session(impersonate=username):
+            for t in redmine_users:
+                t = redmine.issue.create(
                     project_id=project_id,
                     subject=f'@{username} create ticket for @{t.login}',
                     description=t.created_task,
@@ -465,6 +465,7 @@ def create_issues_submit():
                     start_date=date_today,
                     due_date=t.created_date_end,
                 )
+                tickets.append(t)
 
     bot = Driver({
         'url': MATTERMOST_HOST,
