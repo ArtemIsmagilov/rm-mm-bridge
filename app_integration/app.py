@@ -456,7 +456,7 @@ def create_issues_submit():
                 redmine_users.append(redmine_user)
 
         for t in redmine_users:
-            with redmine.session(t.login):
+            with redmine.session(impersonate=t.login):
                 redmine.issue.create(
                     project_id=project_id,
                     subject=f'@{username} create ticket for @{t.login}',
