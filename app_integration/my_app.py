@@ -97,60 +97,57 @@ async def my_event_handler(message):
     load_message = json.loads(message)
     event = load_message.get('event', None)
     if event == 'posted':
-        try:
-            data = load_message['data']
-            post = json.loads(data['post'])
+        data = load_message['data']
+        post = json.loads(data['post'])
 
-            get_msg = post['message']
+        get_msg = post['message']
 
-            # if not correct pattern #t(id ticket) then return
-            if re.search('#t(\d+)', get_msg) is None:
+        # if not correct pattern #t(id ticket) then return
+        if re.search('#t(\d+)', get_msg) is None:
+            return
+
+        mattermost_login = data['sender_name'].removeprefix('@')
+        user_id = post['user_id']
+        post_id = post['id']
+        channel_id = post['channel_id']
+        new_msg = post['message']
+
+        # check exist login_redmine in config
+        login_in_redmine = check_exist_login_redmine_in_config_file(mattermost_login)
+        if type(login_in_redmine) is dict:
+            resp = send_ephemeral_post(user_id, channel_id, login_in_redmine['message'])
+            return
+
+        with Redmine(root_redmine_url, key=ADMIN_REDMINE_KEY_API,
+                     impersonate=login_in_redmine).session() as redmine:
+            # check correct connection in redmine
+            res = check_exist_account_and_token_in_redmine(redmine, mattermost_login, login_in_redmine)
+            if type(res) is dict:
+                error_msg = res['message']
+                resp = send_ephemeral_post(user_id, channel_id, error_msg)
                 return
 
-            mattermost_login = data['sender_name'].removeprefix('@')
-            user_id = post['user_id']
-            post_id = post['id']
-            channel_id = post['channel_id']
-            new_msg = post['message']
-
-            # check exist login_redmine in config
-            login_in_redmine = check_exist_login_redmine_in_config_file(mattermost_login)
-            if type(login_in_redmine) is dict:
-                resp = send_ephemeral_post(user_id, channel_id, login_in_redmine['message'])
-                return
-
-            with Redmine(root_redmine_url, key=ADMIN_REDMINE_KEY_API,
-                         impersonate=login_in_redmine).session() as redmine:
-                # check correct connection in redmine
-                res = check_exist_account_and_token_in_redmine(redmine, mattermost_login, login_in_redmine)
-                if type(res) is dict:
-                    error_msg = res['message']
+            for regex in re.finditer('#t(\d+)', get_msg):
+                ticket_id = int(regex.group(1))
+                try:
+                    ticket = redmine.issue.get(ticket_id)
+                except ResourceNotFoundError:
+                    error_msg = f'##### You have not ticket with ID `{ticket_id}`'
                     resp = send_ephemeral_post(user_id, channel_id, error_msg)
                     return
+                except ForbiddenError:
+                    error_msg = f'##### You haven\'t access to ticket with ID {ticket_id}'
+                    resp = send_ephemeral_post(user_id, channel_id, error_msg)
+                    return
+                else:
+                    new_msg = re.sub(fr'(?<!\[){regex.group(0)}',
+                                     f'[#t{ticket_id}]({root_redmine_url}/issues/{ticket_id})', new_msg, 1)
 
-                for regex in re.finditer('#t(\d+)', get_msg):
-                    ticket_id = int(regex.group(1))
-                    try:
-                        ticket = redmine.issue.get(ticket_id)
-                    except ResourceNotFoundError:
-                        error_msg = f'##### You have not ticket with ID `{ticket_id}`'
-                        resp = send_ephemeral_post(user_id, channel_id, error_msg)
-                        return
-                    except ForbiddenError:
-                        error_msg = f'##### You haven\'t access to ticket with ID {ticket_id}'
-                        resp = send_ephemeral_post(user_id, channel_id, error_msg)
-                        return
-                    else:
-                        new_msg = re.sub(fr'(?<!\[){regex.group(0)}',
-                                         f'[#t{ticket_id}]({root_redmine_url}/issues/{ticket_id})', new_msg, 1)
-
-            if new_msg != get_msg:
-                resp = bot.posts.patch_post(post_id=post_id, options={
-                    'id': post_id,
-                    'message': new_msg,
-                })
-        except BaseException as e:
-            logging.info(traceback.print_exception(e))
+        if new_msg != get_msg:
+            resp = bot.posts.patch_post(post_id=post_id, options={
+                'id': post_id,
+                'message': new_msg,
+            })
 
 
 def parsing_input_text(text):
@@ -1023,7 +1020,8 @@ def run_app():
 
 def main():
     Thread(target=run_app).start()
-    bot.init_websocket(my_event_handler)
+    if REDMINE_MATTERMOST_BRIDGE_APP_TOKEN:
+        bot.init_websocket(my_event_handler)
 
 
 if __name__ == '__main__':
