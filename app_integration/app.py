@@ -1,5 +1,4 @@
 import logging, requests, datetime, re, json, os, traceback
-
 from threading import Thread
 from posixpath import join
 from flask import Flask, request, url_for
@@ -191,6 +190,7 @@ def validation_create_ticket_by_form(context, values):
     assigned_to_id = None
 
     mattermost_assignee_login = values['mattermost_user']
+
     if mattermost_assignee_login is not None:
         mattermost_assignee_login = values['mattermost_user']['label']
 
@@ -198,9 +198,7 @@ def validation_create_ticket_by_form(context, values):
     end_data = values['end_date']
     estimated_time = values['estimated_time']
 
-    done_ratio = values['done']
-    if done_ratio is not None:
-        done_ratio = int(values['done']['value'])
+    done_ratio = int(values['done']['value'])
 
     # exist redmine login  in env file
     redmine_login = check_exist_login_redmine_in_config_file(mattermost_login)
@@ -342,7 +340,7 @@ def check_parsing_text(message):
 def generating_pretext(creator_tickets, tickets, assigned=True):
     if not assigned:
         return f"**@{creator_tickets}** created one ticket by form"
-    return f"**@{creator_tickets}** created tickets for {', '.join('*@%s*' % i.assigned_to for i in tickets)}"
+    return f"**@{creator_tickets}** created ticket(s) for {', '.join('*@%s*' % i.assigned_to for i in tickets)}"
 
 
 def generating_table_tickets_for_me(tickets):
@@ -360,7 +358,7 @@ def generating_table_tickets_for_me(tickets):
         if len(subject) > 30: subject = subject[:30] + '...'
 
         update_date = t.updated_on.strftime('%d.%m.%y')
-        date_end = t.due_date.strftime('%d.%m.%y') if t.due_date else '-'
+        date_end = t.due_date.strftime('%d.%m.%y') if t.due_date else None
         priority_name = t.priority.name
         author = t.author.name
         author_id = t.author.id
@@ -392,12 +390,8 @@ def generating_table_my_tickets(tickets):
         if len(subject) > 30: subject = subject[:30] + '...'
 
         update_date = t.updated_on.strftime('%d.%m.%y')
-        date_end = t.due_date.strftime('%d.%m.%y') if t.due_date else '-'
-
-        if hasattr(t, 'priority'):
-            priority_name = t.priority.name
-        else:
-            priority_name = None
+        date_end = t.due_date.strftime('%d.%m.%y') if t.due_date else None
+        priority_name = t.priority.name
 
         if hasattr(t, 'assigned_to'):
             assignee = t.assigned_to.name
@@ -465,7 +459,7 @@ def _subscribe_team_join(context: dict) -> None:
 @app.route('/manifest.json')
 def manifest() -> dict:
     return {
-        'app_id': 'Redmine',
+        'app_id': 'redmine-mattermost-bridge',
         'display_name': 'Redmine',
         'homepage_url': 'https://github.com/mattermost/mattermost-app-examples/tree/master/python/hello-world',
         'app_type': 'http',
@@ -785,10 +779,8 @@ def create_ticket_by_form_handler():
             {  # status
                 "name": "status",
                 "type": "static_select",
-
                 'is_required': True,
                 'value': options_statuses_in_redmine[0],
-
                 'description': 'Select status',
                 "label": "Status",
                 'hint': 'name status',
@@ -837,6 +829,7 @@ def create_ticket_by_form_handler():
             {  # done
                 "name": "done",
                 "type": "static_select",
+                'is_required': True,
                 'value': OPTIONS_DONE_FOR_FORM[0],
                 'description': 'Select value done(%)',
                 "label": "Done",
@@ -918,6 +911,7 @@ def create_ticket_by_from_submit_handler():
     login_in_mattermost = context['acting_user']['username']
 
     ticket = validation_create_ticket_by_form(context, values)
+
     if type(ticket) is dict:
         return ticket
 
@@ -929,12 +923,12 @@ def create_ticket_by_from_submit_handler():
 
     bot.posts.create_post(options={
         'channel_id': channel_id,
-        'message': '# Ok. I created your tickets in redmine by form',
+        'message': f'# Ok, {login_in_mattermost}. I create ticket in redmine by form',
         "props": {
             "attachments": [
                 {
                     "fallback": "test",
-                    "pretext": generating_pretext(login_in_mattermost, ticket, assigned=False),
+                    "pretext": generating_pretext(login_in_mattermost, [ticket], hasattr(ticket, 'assigned_to')),
                     "text": generating_table_my_tickets([ticket]),
                 }
             ]}
@@ -1004,7 +998,7 @@ def create_tickets_submit_handler():
 
     bot.posts.create_post(options={
         'channel_id': channel_id,
-        'message': '# Ok. I create your tickets in redmine.',
+        'message': f'# Ok, {login_in_mattermost}. I create your ticket(s) in redmine.',
         "props": {
             "attachments": [
                 {

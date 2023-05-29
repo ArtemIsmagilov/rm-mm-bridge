@@ -12,8 +12,8 @@
   созданные тикеты.
 * Расширяемое приложение. Проект открыт для дальнейшей разработки, легко масштабируется.
   Например, при разработке, можно добавить объединение нескольких пользователей в группы, управление тикетами,
-  уведомление на почту по определённым событиям, автоматическое создание нескольких проектов в одну строку, дальшейшая
-  валидация полученных данных, перехват слов пользователя по регулярным выражениям и многое другое.
+  уведомление на почту по определённым событиям, автоматическое создание нескольких проектов в одну строку, 
+дальнейшая валидация полученных данных, перехват слов пользователя по регулярным выражениям и многое другое.
 * Создание тикетов по форме Redmine прямо через приложение.
 * Создание ссылок перенаправляющих в Redmine, а именно на тикеты, на проекты, на пользователей, на `Мои задачи`,
   на `Созданные задачи`.
@@ -38,12 +38,14 @@
 
 ## Некоторое соглашение
 
-+ Чтобы создать ссылку на тикет, напишите по следующему примеру `#t` + `ID тикета`.
-  Например, `#t10`. Вот один из пример. ![screen9.png](./imgs/screen9.png "Example create link for tickets")
++ Чтобы создать ссылку на тикет, напишите по следующему примеру `#t(ID тикета)`.
+  Например, `#t10`. Вот один из примеров. ![screen9.png](./imgs/screen9.png "Example create link for tickets")
 
-  Важное уточнение. Перехватывающий веб сокет работает только с каналами, директом приложения и потоками. 
-  Чтобы создать ссылки в виде `#t(ID тикета)` в директе, просто напишите сообщение боту и скопируйте его текст. 
-  Если вы пишете в канале или потоке, то бот создасть ссылки на тикеты.
+  При нажатии на ссылку, происходит перенаправление на конкретный тикет. 
+
+  **Важное уточнение.** Перехватывающий веб сокет работает только с каналами, директом приложения и потоками. 
+  Чтобы создать ссылки в виде `#t(ID тикета)` в директе, просто напишите сообщение боту, бот создаст ссылки в тексте. 
+  Если вы пишете в канале или потоке, или в директе бота, то копировать текст не нужно.
   
   > ###### Mattermost API Reference
   > This is an example of making a user_typing request, with the purpose of alerting the server that the connected 
@@ -53,7 +55,7 @@
   - **mattermost_username=redmine_username**
   - **seconad_username_in_mattermost=second_username_in_redmine**
 
-**Строго, сначала логин редмайна=логин маттермоста**
+**Строго, сначала логин маттермоста=логин редмайна**
 
 
 ## Тестирование приложения будет состоять из небольших пунктов.
@@ -65,7 +67,7 @@
 5. После активации REST API на локальных сервисах добавить необходимые переменные окружения в файл
    `.docker.env` приложения. Файл находится в `./app_integration/.docker.env`
 6. После добавления всех необходимых переменных в `./app_integration/.docker.env` установить докер контейнер
-   redmine-mattermost-bridge и запустить
+   mattermost-redmine интеграции и запустить
 7. Установить приложение в mattermost командой c параметрами хоста и порта виртуального окружения
 
    ```
@@ -74,14 +76,16 @@
 
 8. Сгенерируйте токен для приложения через настройки
 9. Добавьте токен в  `./app_integration/.docker.env`
-10. Добавьте всех необходимых пользователей **mattermost_login=redmine_login** в  `./app_integration/.docker.env`, 
+10. Добавьте токен администратора и дайте разрешение на создание постов. Для работы фичи t#ID необходимо установить 
+бота в System Admin.
+11. Добавьте всех необходимых пользователей **mattermost_login=redmine_login** в  `./app_integration/.docker.env`, 
 предварительно убедитесь что логины корректны и аккаунты активны.
-11. Перезапустите докер контейнер в папке app_integration/ 
+12. Перезапустите докер контейнер в папке ./app_integration
     ```shell
     docker compose stop
     docket compose up
     ```
-12. Приложение готово
+13. Приложение готово
 
 ## Схема проекта
 
@@ -103,7 +107,7 @@
 
 * копируем ./app_integration/.docker.env.example в ./app_integration/.docker.env
   ```shell
-  cp ./app_integration/.docker.env.example ./app_integration/.docker.env
+  cp ./app_integration/.docker.env.example app_integration/.docker.env
   ```
 
 ## Установка redmine контейнера через docker-compose.yml
@@ -193,7 +197,7 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
       docker network inspect dev
       ```
 
-* Чтобы установить приложение, нужно перейти на наш mattermost сайт и ввести `/`(slash) команду по примеру из
+* Чтобы установить приложение, нужно перейти на ваш запущенный mattermost сайт и ввести `/`(slash) команду по примеру из
   официальной документации. https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
   > #### Install the App on Mattermost
   > `/apps install http http://mattermost-apps-python-hello-world:8090/manifest.json`
@@ -202,7 +206,7 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 * Если вам нужно удалить его, то смотрим здесь
   https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/#uninstall-the-app
 * После успешной загрузки нужно сгенерировать токен для приложения, добавить его в `./app_integration/.docker.env`
-  Сгенерировать токен нужно в разделе `Интеграции` > `Аккаунты ботов` > `@Redmine`.
+  Сгенерировать токен нужно в разделе `Интеграции` > `Аккаунты ботов` > `@redmine`.
   Также предоставьте доступ бота к Direct сообщениям, назначьте ему роль администратор так как интеграция работает 
 через личные сообщения. Интеграция работает c API токеном.
   ![screen4.png](./imgs/screen4.png "Generate access app token and get privilege.")
@@ -224,15 +228,15 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 
 ### Создать задания `/create_tickets`
 
-![screen5.jpeg](./imgs/screen5.jpeg "Create tickets.")
+![screen5.png](./imgs/screen5.png "Create tickets.")
 
 ### Посмотреть задания назначенные мне `/tickets_for_me`
 
-![screen6.jpeg](./imgs/screen6.jpeg "Look ticket for me.")
+![screen6.png](./imgs/screen6.png "Look ticket for me.")
 
 ### Посмотреть задания назначенные мною `/my_tickets`
 
-![screen7.jpeg](./imgs/screen7.jpeg "Look my tickets.")
+![screen7.png](./imgs/screen7.png "Look my tickets.")
 
 ### Создать тикет по форме Redmine `/create_tickets_by_form`
 
