@@ -1,0 +1,2 @@
+class ValidationDateError(Exception):
+    pass

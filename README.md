@@ -36,6 +36,7 @@
 | /tickets_for_me        | Посмотреть задания назначенные мне  |
 | /my_tickets            | Посмотреть задания назначенные мною |
 
+
 ## Некоторое соглашение
 
 + Чтобы создать ссылку на тикет, напишите по следующему примеру `#t(ID тикета)`.
@@ -47,6 +48,7 @@
   Чтобы создать ссылки в виде `#t(ID тикета)` в директе, просто напишите сообщение боту, бот создаст ссылки в тексте. 
   Если вы пишете в канале или потоке, или в директе бота, то копировать текст не нужно.
   
+  
   > ###### Mattermost API Reference
   > This is an example of making a user_typing request, with the purpose of alerting the server that the connected 
   > client has begun typing in a **channel** or **thread**.
@@ -57,6 +59,11 @@
 
 **Строго, сначала логин маттермоста=логин редмайна**
 
++ Преобразование текста тикета в ссылку требует прав администратора для приложения. Из документации
+  > ### Create a ephemeral post <br>
+  > Create a new ephemeral post in a channel.<br><br>
+  > **Permissions**<br>
+  > _Must have create_post_ephemeral permission **(currently only given to system admin)**_
 
 ## Тестирование приложения будет состоять из небольших пунктов.
 
@@ -264,11 +271,3 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
   docker-compose - https://kurazhov.ru/install-redmine-on-docker-compose/?ysclid=lhu5e6s0bb161225177
 * Чат-бот для mattermost - https://habr.com/ru/companies/hh/articles/727246/
 * Документация по докеру - https://docs.docker.com/engine/install/
-
-
-
-
-
-
-
-

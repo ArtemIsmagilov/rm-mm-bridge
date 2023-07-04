@@ -20,7 +20,7 @@ services:
       REDMINE_DB_PASSWORD: "strong_pass"
       REDMINE_DB_DATABASE: "redmine"
       REDMINE_SECRET_KEY_BASE: "…"
-    restart: always
+    restart: "unless-stopped"
 
     networks:
       dev:
@@ -34,7 +34,7 @@ services:
       POSTGRES_PASSWORD: "strong_pass"
       POSTGRES_DB: "redmine"
       PGDATA: "/var/lib/postgresql/data"
-    restart: always
+    restart: "unless-stopped"
     ports:
       - "50002:50002"
 

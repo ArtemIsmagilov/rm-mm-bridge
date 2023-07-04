@@ -1,4 +1,4 @@
-import logging, requests, datetime, re, json, os, traceback
+import logging, requests, datetime, re, json
 from threading import Thread
 from posixpath import join
 from flask import Flask, request, url_for
@@ -6,31 +6,15 @@ from redminelib import Redmine
 from redminelib.exceptions import ImpersonateError, AuthError, ResourceNotFoundError, ForbiddenError
 from mattermostdriver import Driver
 from mattermostdriver.exceptions import NoAccessTokenProvided, InvalidOrMissingParameters
-from dotenv import load_dotenv
 
-load_dotenv('.docker.env')
+from my_config import *
+from my_constants import *
+from ticket_user import TicketUser
+from client_errors import ValidationDateError
 
-REDMINE_PROTOCOL = os.environ['REDMINE_PROTOCOL']
-REDMINE_HOST = os.environ['REDMINE_HOST']
-REDMINE_PORT = os.environ['REDMINE_PORT']
 
-MATTERMOST_PROTOCOL = os.environ['MATTERMOST_PROTOCOL']
-MATTERMOST_HOST = os.environ['MATTERMOST_HOST']
-MATTERMOST_PORT = os.environ['MATTERMOST_PORT']
-
-PYTHON_BOT_APP_HOST = os.environ['PYTHON_BOT_APP_HOST']
-PYTHON_BOT_APP_PORT = os.environ['PYTHON_BOT_APP_PORT']
-
-ADMIN_REDMINE_KEY_API = os.environ['ADMIN_REDMINE_KEY_API']
-ADMIN_MATTERMOST_TOKEN = os.environ['ADMIN_MATTERMOST_TOKEN']
-
-REDMINE_MATTERMOST_BRIDGE_APP_TOKEN = os.environ['REDMINE_MATTERMOST_BRIDGE_APP_TOKEN']
-
-default_root_url = f'http://{PYTHON_BOT_APP_HOST}:{PYTHON_BOT_APP_PORT}'
-static_path = f'{default_root_url}/static'
-
-root_redmine_url = f'{REDMINE_PROTOCOL}://{REDMINE_HOST}:{REDMINE_PORT}'
-root_mattermost_url = f'{MATTERMOST_PROTOCOL}://{MATTERMOST_HOST}:{MATTERMOST_PORT}'
+def static_path(filename):
+    return f'{app_url}/static/{filename}'
 
 
 def check_correctness_access_token_for_app(bot):
@@ -49,48 +33,19 @@ logging.basicConfig(level=logging.DEBUG,
 app = Flask(__name__, static_url_path='/static', static_folder='./static')
 
 bot = Driver({
-    'url': MATTERMOST_HOST,
-    'token': REDMINE_MATTERMOST_BRIDGE_APP_TOKEN,
-    'scheme': 'http',
-    'port': int(MATTERMOST_PORT),
+    'url': MM_HOST,
+    'token': MM_APP_TOKEN,
+    'scheme': MM_PROTOCOL,
+    'port': int(MM_PORT),
     'basepath': '/api/v4',
     'verify': True,  # Or /path/to/file.pem
 })
 
-if REDMINE_MATTERMOST_BRIDGE_APP_TOKEN:
+if MM_APP_TOKEN:
     res_valid = check_correctness_access_token_for_app(bot)
     if type(res_valid) is dict:
-        logging.error(res_valid)
+        logging.error('REDMINE_MATTERMOST_BRIDGE_APP_TOKEN ERROR: %s', res_valid)
         exit(1)
-
-EXPAND_DICT = {
-    'app': 'all',
-    'acting_user': 'all',
-    'acting_user_access_token': 'all',
-    'locale': 'all',
-    'channel': 'all',
-    'channel_member': 'all',
-    'team': 'all',
-    'team_member': 'all',
-    'post': 'all',
-    'root_post': 'all',
-    'user': 'all',
-    'oauth2_app': 'all',
-    'oauth2_user': 'all',
-}
-
-OPTIONS_DONE_FOR_FORM = [{'label': f'{d} %', 'value': f'{d}'} for d in range(0, 110, 10)]
-
-
-class TicketUser:
-    def __init__(self, task, login, date_end):
-        self.task = task
-        self.login = login
-        self.date_end = date_end
-
-
-class ValidationDateError(Exception):
-    pass
 
 
 async def my_event_handler(message):
@@ -118,7 +73,7 @@ async def my_event_handler(message):
             resp = send_ephemeral_post(user_id, channel_id, login_in_redmine['message'])
             return
 
-        with Redmine(root_redmine_url, key=ADMIN_REDMINE_KEY_API,
+        with Redmine(redmine_url, key=ADMIN_REDMINE_KEY_API,
                      impersonate=login_in_redmine).session() as redmine:
             # check correct connection in redmine
             res = check_exist_account_and_token_in_redmine(redmine, mattermost_login, login_in_redmine)
@@ -126,7 +81,6 @@ async def my_event_handler(message):
                 error_msg = res['message']
                 resp = send_ephemeral_post(user_id, channel_id, error_msg)
                 return
-
             for regex in re.finditer('#t(\d+)', get_msg):
                 ticket_id = int(regex.group(1))
                 try:
@@ -141,7 +95,7 @@ async def my_event_handler(message):
                     return
                 else:
                     new_msg = re.sub(fr'(?<!\[){regex.group(0)}',
-                                     f'[#t{ticket_id}]({root_redmine_url}/issues/{ticket_id})', new_msg, 1)
+                                     f'[#t{ticket_id}]({redmine_url}/issues/{ticket_id})', new_msg, 1)
 
         if new_msg != get_msg:
             resp = bot.posts.patch_post(post_id=post_id, options={
@@ -202,7 +156,7 @@ def validation_create_ticket_by_form(context, values):
     if type(redmine_login) is dict:
         return redmine_login
 
-    with Redmine(root_redmine_url, key=ADMIN_REDMINE_KEY_API,
+    with Redmine(redmine_url, key=ADMIN_REDMINE_KEY_API,
                  impersonate=redmine_login).session() as redmine:
         # exist account and access token in redmine
         res = check_exist_account_and_token_in_redmine(redmine, mattermost_login, redmine_login)
@@ -325,13 +279,14 @@ def check_included_user_in_project(redmine, project_identifier, mattermost_login
 def check_parsing_text(message):
     try:
         parsed_data = parsing_input_text(message)
-        return parsed_data
     except AttributeError:
         return {'type': 'error', 'text': '## Invalid input data. Look for example.'}
     except ValueError:
         return {'type': 'error', 'text': '## Invalid format end date. Look for example [day.month.year] - 10.8.23.'}
     except ValidationDateError:
         return {'type': 'error', 'text': '## Due date must be greater than start date'}
+    else:
+        return parsed_data
 
 
 def generating_pretext(creator_tickets, tickets, assigned=True):
@@ -359,15 +314,15 @@ def generating_table_tickets_for_me(tickets):
         priority_name = t.priority.name
         author = t.author.name
         author_id = t.author.id
-        line = f'| [{issue_id}]({root_redmine_url}/issues/{issue_id}) |' \
-               f' [{project_name}]({root_redmine_url}/projects/{project_id}) |' \
+        line = f'| [{issue_id}]({redmine_url}/issues/{issue_id}) |' \
+               f' [{project_name}]({redmine_url}/projects/{project_id}) |' \
                f' {tracker_name} |' \
                f' {status_name} |' \
-               f' [{subject}]({root_redmine_url}/issues/{issue_id}) |' \
+               f' [{subject}]({redmine_url}/issues/{issue_id}) |' \
                f' {update_date} |' \
                f' {date_end} |' \
                f' {priority_name} |' \
-               f' [{author}]({root_redmine_url}/users/{author_id}) |\n'
+               f' [{author}]({redmine_url}/users/{author_id}) |\n'
         table += line
 
     return table
@@ -393,14 +348,14 @@ def generating_table_my_tickets(tickets):
         if hasattr(t, 'assigned_to'):
             assignee = t.assigned_to.name
             assigned_id = t.assigned_to.id
-            assignee_line = f' [{assignee}]({root_redmine_url}/users/{assigned_id}) |\n'
+            assignee_line = f' [{assignee}]({redmine_url}/users/{assigned_id}) |\n'
         else:
             assignee_line = 'None \n'
-        line = f'| [{issue_id}]({root_redmine_url}/issues/{issue_id}) |' \
-               f' [{project_name}]({root_redmine_url}/projects/{project_id}) |' \
+        line = f'| [{issue_id}]({redmine_url}/issues/{issue_id}) |' \
+               f' [{project_name}]({redmine_url}/projects/{project_id}) |' \
                f' {tracker_name} |' \
                f' {status_name} |' \
-               f' [{subject}]({root_redmine_url}/issues/{issue_id}) |' \
+               f' [{subject}]({redmine_url}/issues/{issue_id}) |' \
                f' {update_date} |' \
                f' {date_end} |' \
                f' {priority_name} |' \
@@ -470,15 +425,11 @@ def manifest() -> dict:
             'path': '/bindings',
         },
         'requested_locations': [
-            '/channel_header',
             '/command',
-            '/post_menu',
-
         ],
-        'root_url': os.environ.get('ROOT_URL', default_root_url),
-
+        'root_url': app_url,
         "http": {
-            "root_url": os.environ.get('ROOT_URL', default_root_url)
+            "root_url": app_url,
         },
 
     }
@@ -493,59 +444,69 @@ def on_bindings() -> dict:
                 # binding for a command
                 'location': '/command',
                 'bindings': [
-                    {  # app_info
-                        'description': 'show info about commands app',
-                        'hint': '[This is command with info about app: redmine-mattermost-bridge]',
-                        # this will be the command displayed to user as /first-command
-                        'label': 'app_info',
-                        'icon': f'{static_path}/redmine.png',
-                        'submit': {
-                            'path': '/app_info',
-                            'expand': EXPAND_DICT,
-                        },
-                    },
-                    {  # create_ticket_by_form
-                        'description': 'create ticket by form',
-                        'hint': '[You can create ticket by form with some fields]',
-                        'label': 'create_ticket_by_form',
-                        'icon': f'{static_path}/redmine.png',
-                        'submit': {
-                            'path': '/create_ticket_by_form',
-                            'expand': EXPAND_DICT,
-                        },
-                    },
+                    {  # command with embedded form
+                        'description': 'Integration with Redmine',
+                        'hint': '[app_info|create_ticket_by_form|create_tickets|tickets_for_me]',
+                        # this will be the command displayed to user as /second-command
+                        'label': 'integration_with_redmine',
+                        'icon': static_path('redmine.png'),
+                        'bindings': [
+                            {  # app_info
+                                'description': 'show info about commands app',
+                                'hint': '[This is command with info about app: redmine-mattermost-bridge]',
+                                # this will be the command displayed to user as /first-command
+                                'label': 'app_info',
+                                'icon': static_path('redmine.png'),
+                                'submit': {
+                                    'path': '/app_info',
+                                    'expand': EXPAND_DICT,
+                                },
+                            },
+                            {  # create_ticket_by_form
+                                'description': 'create ticket by form',
+                                'hint': '[You can create ticket by form with some fields]',
+                                'label': 'create_ticket_by_form',
+                                'icon': static_path('redmine.png'),
+                                'submit': {
+                                    'path': '/create_ticket_by_form',
+                                    'expand': EXPAND_DICT,
+                                },
+                            },
 
-                    {  # create_tickets
-                        'description': 'create issues',
-                        'hint': '[You can create some issues in one form]',
-                        'label': 'create_tickets',
-                        'icon': f'{static_path}/redmine.png',
-                        'submit': {
-                            'path': '/create_tickets',
-                            'expand': EXPAND_DICT,
-                        },
-                    },
+                            {  # create_tickets
+                                'description': 'create issues',
+                                'hint': '[You can create some issues in one form]',
+                                'label': 'create_tickets',
+                                'icon': static_path('redmine.png'),
+                                'submit': {
+                                    'path': '/create_tickets',
+                                    'expand': EXPAND_DICT,
+                                },
+                            },
 
-                    {  # tickets_for_me
-                        'description': 'tickets for me',
-                        'hint': '[You can look ticket for you]',
-                        'label': 'tickets_for_me',
-                        'icon': f'{static_path}/redmine.png',
-                        'submit': {
-                            'path': '/tickets_for_me',
-                            'expand': EXPAND_DICT,
-                        },
-                    },
-                    {  # my_tickets
-                        'description': 'my tickets',
-                        'hint': '[You can look your tickets]',
-                        'label': 'my_tickets',
-                        'icon': f'{static_path}/redmine.png',
-                        'submit': {
-                            'path': '/my_tickets',
-                            'expand': EXPAND_DICT,
-                        },
-                    },
+                            {  # tickets_for_me
+                                'description': 'tickets for me',
+                                'hint': '[You can look ticket for you]',
+                                'label': 'tickets_for_me',
+                                'icon': static_path('redmine.png'),
+                                'submit': {
+                                    'path': '/tickets_for_me',
+                                    'expand': EXPAND_DICT,
+                                },
+                            },
+                            {  # my_tickets
+                                'description': 'my tickets',
+                                'hint': '[You can look your tickets]',
+                                'label': 'my_tickets',
+                                'icon': static_path('redmine.png'),
+                                'submit': {
+                                    'path': '/my_tickets',
+                                    'expand': EXPAND_DICT,
+                                },
+                            },
+                        ],
+                    }
+                    ,
                 ]
             }
         ]
@@ -620,7 +581,7 @@ def my_tickets_handler():
     if type(login_in_redmine) is dict:
         return login_in_redmine
 
-    with Redmine(root_redmine_url, key=ADMIN_REDMINE_KEY_API,
+    with Redmine(redmine_url, key=ADMIN_REDMINE_KEY_API,
                  impersonate=login_in_redmine).session() as redmine:
 
         # validation2 [have account and token for REST API]
@@ -637,7 +598,7 @@ def my_tickets_handler():
         data = [bot_user_id, user_id]
         response_dict = bot.channels.create_direct_message_channel(options=data)
         channel_id = response_dict['id']
-        url_reported_issues = f'{root_redmine_url}/issues?c%5B%5D=project&c%5B%5D=tracker&c%5B%5D=status&c%5B%5D=subject&f%5B%5D=status_id&f%5B%5D=author_id&f%5B%5D=project.status&op%5Bauthor_id%5D=%3D&op%5Bproject.status%5D=%3D&op%5Bstatus_id%5D=o&set_filter=1&sort=updated_on%3Adesc&v%5Bauthor_id%5D%5B%5D=me&v%5Bproject.status%5D%5B%5D=1&v%5Bstatus_id%5D%5B%5D='
+        url_reported_issues = f'{redmine_url}/issues?c%5B%5D=project&c%5B%5D=tracker&c%5B%5D=status&c%5B%5D=subject&f%5B%5D=status_id&f%5B%5D=author_id&f%5B%5D=project.status&op%5Bauthor_id%5D=%3D&op%5Bproject.status%5D=%3D&op%5Bstatus_id%5D=o&set_filter=1&sort=updated_on%3Adesc&v%5Bauthor_id%5D%5B%5D=me&v%5Bproject.status%5D%5B%5D=1&v%5Bstatus_id%5D%5B%5D='
 
         resp = bot.posts.create_post(options={
             'channel_id': channel_id,
@@ -666,7 +627,7 @@ def tickets_for_me_handler():
     if type(login_in_redmine) is dict:
         return login_in_redmine
 
-    with Redmine(root_redmine_url, key=ADMIN_REDMINE_KEY_API,
+    with Redmine(redmine_url, key=ADMIN_REDMINE_KEY_API,
                  impersonate=login_in_redmine).session() as redmine:
 
         # validation2 [have account and token for REST API]
@@ -683,7 +644,7 @@ def tickets_for_me_handler():
     data = [bot_user_id, user_id]
     response_dict = bot.channels.create_direct_message_channel(options=data)
     channel_id = response_dict['id']
-    url_issues_assigned_to_me = f'{root_redmine_url}/issues?c%5B%5D=project&c%5B%5D=tracker&c%5B%5D=status&c%5B%5D=subject&c%5B%5D=author&f%5B%5D=status_id&f%5B%5D=assigned_to_id&f%5B%5D=project.status&op%5Bassigned_to_id%5D=%3D&op%5Bproject.status%5D=%3D&op%5Bstatus_id%5D=o&set_filter=1&sort=author%2Cpriority%3Adesc%2Cupdated_on%3Adesc&v%5Bassigned_to_id%5D%5B%5D=me&v%5Bproject.status%5D%5B%5D=1&v%5Bstatus_id%5D%5B%5D='
+    url_issues_assigned_to_me = f'{redmine_url}/issues?c%5B%5D=project&c%5B%5D=tracker&c%5B%5D=status&c%5B%5D=subject&c%5B%5D=author&f%5B%5D=status_id&f%5B%5D=assigned_to_id&f%5B%5D=project.status&op%5Bassigned_to_id%5D=%3D&op%5Bproject.status%5D=%3D&op%5Bstatus_id%5D=o&set_filter=1&sort=author%2Cpriority%3Adesc%2Cupdated_on%3Adesc&v%5Bassigned_to_id%5D%5B%5D=me&v%5Bproject.status%5D%5B%5D=1&v%5Bstatus_id%5D%5B%5D='
     resp = bot.posts.create_post(options={
         'channel_id': channel_id,
         'message': f'# Ok, {login_in_mattermost}. I look tickets for you.',
@@ -709,7 +670,7 @@ def create_ticket_by_form_handler():
     if type(login_in_redmine) is dict:
         return login_in_redmine
 
-    with Redmine(root_redmine_url, key=ADMIN_REDMINE_KEY_API,
+    with Redmine(redmine_url, key=ADMIN_REDMINE_KEY_API,
                  impersonate=login_in_redmine).session() as redmine:
 
         # validation2 [have account and token for REST API]
@@ -732,7 +693,7 @@ def create_ticket_by_form_handler():
             "path": "/create_ticket_by_form"
         },
         "title": "Create ticket by form.",
-        "icon": f'{static_path}/redmine.png',
+        "icon": static_path('redmine.png'),
         "submit": {
             "path": "/create_ticket_by_form_submit",
             "expand": EXPAND_DICT,
@@ -849,7 +810,7 @@ def create_tickets_handler():
     if type(login_in_redmine) is dict:
         return login_in_redmine
 
-    with Redmine(f'http://{REDMINE_HOST}:{REDMINE_PORT}', key=ADMIN_REDMINE_KEY_API,
+    with Redmine(redmine_url, key=ADMIN_REDMINE_KEY_API,
                  impersonate=login_in_redmine).session() as redmine:
 
         # validation2 [have account and token for REST API]
@@ -867,7 +828,7 @@ def create_tickets_handler():
             "path": "/create_tickets"
         },
         "title": "Create issues form.",
-        "icon": f'{static_path}/redmine.png',
+        "icon": static_path('redmine.png'),
         "submit": {
             "path": "/create_tickets_submit",
             "expand": EXPAND_DICT,
@@ -952,7 +913,7 @@ def create_tickets_submit_handler():
         return parsed_data
 
     redmine_users = []
-    with Redmine(root_redmine_url, key=ADMIN_REDMINE_KEY_API).session() as redmine:
+    with Redmine(redmine_url, key=ADMIN_REDMINE_KEY_API).session() as redmine:
         for u in parsed_data:
 
             # validation1 [have user in .env file]
@@ -1012,15 +973,15 @@ def create_tickets_submit_handler():
 def run_app():
     app.run(
         debug=True,
-        host=PYTHON_BOT_APP_HOST,
-        port=int(PYTHON_BOT_APP_PORT),
+        host=APP_HOST_INTERNAl,
+        port=int(APP_PORT),
         use_reloader=False,
     )
 
 
 def main():
     Thread(target=run_app).start()
-    if REDMINE_MATTERMOST_BRIDGE_APP_TOKEN:
+    if MM_APP_TOKEN:
         bot.init_websocket(my_event_handler)
 
 
