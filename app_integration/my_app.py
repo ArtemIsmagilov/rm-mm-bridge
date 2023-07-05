@@ -1,7 +1,7 @@
 import logging, requests, datetime, re, json
 from threading import Thread
 from posixpath import join
-from flask import Flask, request, url_for
+from flask import Flask, request, url_for, redirect
 from redminelib import Redmine
 from redminelib.exceptions import ImpersonateError, AuthError, ResourceNotFoundError, ForbiddenError
 from mattermostdriver import Driver
@@ -11,6 +11,8 @@ from my_config import *
 from my_constants import *
 from ticket_user import TicketUser
 from client_errors import ValidationDateError
+
+
 
 
 def static_path(filename):
@@ -44,7 +46,7 @@ bot = Driver({
 if MM_APP_TOKEN:
     res_valid = check_correctness_access_token_for_app(bot)
     if type(res_valid) is dict:
-        logging.error('REDMINE_MATTERMOST_BRIDGE_APP_TOKEN ERROR: %s', res_valid)
+        logging.error('Incorrect MM_APP_TOKEN ERROR: %s', res_valid)
         exit(1)
 
 
@@ -416,7 +418,7 @@ def manifest() -> dict:
         'homepage_url': 'https://github.com/mattermost/mattermost-app-examples/tree/master/python/hello-world',
         'app_type': 'http',
         'icon': 'redmine.png',
-        'requested_permissions': ['act_as_bot', 'act_as_user', 'remote_oauth2', 'remote_webhooks'],
+        'requested_permissions': ['act_as_bot', 'act_as_user', 'remote_webhooks'],
         'on_install': {
             'path': '/install',
             'expand': EXPAND_DICT,
@@ -971,12 +973,17 @@ def create_tickets_submit_handler():
 
 
 def run_app():
-    app.run(
+    options = dict(
         debug=True,
         host=APP_HOST_INTERNAl,
         port=int(APP_PORT),
         use_reloader=False,
     )
+    if APP_PROTOCOL == 'https':
+        options.update(dict(
+            # ssl_context=(path_to_full_chaine, path_to_key),
+        ))
+    app.run(**options)
 
 
 def main():

@@ -273,3 +273,4 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
   docker-compose - https://kurazhov.ru/install-redmine-on-docker-compose/?ysclid=lhu5e6s0bb161225177
 * Чат-бот для mattermost - https://habr.com/ru/companies/hh/articles/727246/
 * Документация по докеру - https://docs.docker.com/engine/install/
+* HTTPS на Flask - https://blog.miguelgrinberg.com/post/running-your-flask-application-over-https
