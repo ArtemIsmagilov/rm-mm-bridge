@@ -15,7 +15,9 @@ services:
 
     volumes:
       - "./:/app"
-    command: "bash -c 'pip3 install -r requirements.txt &&  python3 my_app.py'"
+
+    command: >
+      bash -c 'pip3 install -r requirements.txt &&  python3 my_app.py'
 
     networks:
       dev:
