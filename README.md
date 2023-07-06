@@ -62,6 +62,11 @@
   > To add the bot account to teams and channels you want it to interact in, select the team drop-down menu, then select <br> 
   > Invite People. Next, select Invite Member and enter the bot account in the Add or Invite People field. Then select <br>
   > Invite Members. You should now be able to add the bot account to channels like any other user.<br>
+  
+
++ Установка приложения и приглашение бота в команду
+  https://drive.google.com/file/d/16RAOr7d5huqCDg7T4-Ww5wqewNmREY-n/view?usp=sharing
+
 
 + Для идентификации пользователя Redmine и Mattermost впишите пользовательский **(логин в redmine)=(логин в mattermost)**. Пример
   - **mattermost_username=redmine_username**
@@ -74,8 +79,7 @@
   > Create a new ephemeral post in a channel.<br><br>
   > **Permissions**<br>
   > _Must have create_post_ephemeral permission **(currently only given to system admin)**_
-
-
+  
 
 ## Тестирование приложения будет состоять из небольших пунктов.
 
