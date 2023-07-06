@@ -2,8 +2,8 @@ version: "3.9"
 
 services:
   mattermost:
-    image: "mattermost/mattermost-enterprise-edition:7.5.0" # https://hub.docker.com/r/mattermost/mattermost-enterprise-edition/tags
-    restart: "unless-stopped"
+    image: "mattermost/mattermost-enterprise-edition:7.7.1" # https://hub.docker.com/r/mattermost/mattermost-enterprise-edition/tags
+    restart : "unless-stopped"
     depends_on:
       - "db"
     ports:
@@ -26,13 +26,15 @@ services:
       MM_LOGSETTINGS_FILELEVEL: "DEBUG"
       MM_FILESETTINGS_MAXFILESIZE: 123524266
       MM_FEATUREFLAGS_AppsEnabled: "true"
-      MM_FEATUREFLAGS_PluginApps: "1.2.0" # https://github.com/mattermost/mattermost-plugin-apps/releases
+      MM_FEATUREFLAGS_PluginApps: "1.2.2" # https://github.com/mattermost/mattermost-plugin-apps/releases
     volumes:
       - "./mm-logs:/mattermost/logs:rw"
-
+      #- "/etc/letsencrypt/live/example.com/:/etc/letsencrypt/live/example.com/"
     networks:
       dev:
         ipv4_address: 172.10.1.30
+
+
 
   db:
     image: "postgres"
@@ -45,6 +47,7 @@ services:
     networks:
       dev:
         ipv4_address: 172.10.1.40
+
 
 networks:
   dev:

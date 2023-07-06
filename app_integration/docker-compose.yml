@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   redmine-mattermost-bridge:
-    image: "python:latest"
+    image: "python:slim"
     restart: "unless-stopped"
     working_dir: "/app"
     ports:
@@ -15,9 +15,10 @@ services:
 
     volumes:
       - "./:/app"
+      #- "/etc/letsencrypt/live/example.com/:/etc/letsencrypt/live/example.com/"
 
-    command: >
-      bash -c 'pip3 install -r requirements.txt &&  python3 my_app.py'
+    command: > 
+      bash -c "pip3 install -r requirements.txt &&  bash run_app.sh"
 
     networks:
       dev:

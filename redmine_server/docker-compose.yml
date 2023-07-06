@@ -13,6 +13,8 @@ services:
       - ./storage/docker_redmine-themes:/usr/src/redmine/public/themes
       - ./storage/docker_redmine-data:/usr/src/redmine/files
       - ./storage/configuration.yml:/usr/src/redmine/config/configuration.yml
+      #- "/etc/letsencrypt/live/example.com/:/etc/letsencrypt/live/example.com/"
+
 
     environment:
       REDMINE_DB_POSTGRES: "postgres"
@@ -26,10 +28,12 @@ services:
       dev:
         ipv4_address: 172.10.1.10
 
+
   postgres:
     image: postgres
     volumes:
       - ./storage/postgresql-data:/var/lib/postgresql/data
+
     environment:
       POSTGRES_PASSWORD: "strong_pass"
       POSTGRES_DB: "redmine"
@@ -42,9 +46,6 @@ services:
       dev:
         ipv4_address: 172.10.1.20
 
-
 networks:
   dev:
     external: true
-
-

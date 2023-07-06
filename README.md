@@ -231,23 +231,30 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
       при вводе невалидной информации.
     - Создавать ссылки перенаправляющие в redmine
 
-### Информация о приложении `/app_info`
+### Полезные комманды
+- docker compose up _Create and start containers_
+- docker compose down _Stop and remove containers, networks_
+
+(docker compose commands)[https://docs.docker.com/compose/reference/]
+
+
+### Информация о приложении `app_info`
 
 ![screen8.png](./imgs/screen8.png "Help info.")
 
-### Создать задания `/create_tickets`
+### Создать задания `create_tickets`
 
 ![screen5.png](./imgs/screen5.png "Create tickets.")
 
-### Посмотреть задания назначенные мне `/tickets_for_me`
+### Посмотреть задания назначенные мне `tickets_for_me`
 
 ![screen6.png](./imgs/screen6.png "Look ticket for me.")
 
-### Посмотреть задания назначенные мною `/my_tickets`
+### Посмотреть задания назначенные мною `my_tickets`
 
 ![screen7.png](./imgs/screen7.png "Look my tickets.")
 
-### Создать тикет по форме Redmine `/create_tickets_by_form`
+### Создать тикет по форме Redmine `create_tickets_by_form`
 
 ![screen10.png](./imgs/screen10.png "form for ticket")
 
@@ -274,3 +281,29 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 * Чат-бот для mattermost - https://habr.com/ru/companies/hh/articles/727246/
 * Документация по докеру - https://docs.docker.com/engine/install/
 * HTTPS на Flask - https://blog.miguelgrinberg.com/post/running-your-flask-application-over-https
+* Прокси приложения - https://dvmn.org/encyclopedia/web-server/deploy-django-nginx-gunicorn/
+* Документация Gunicorn - https://docs.gunicorn.org/en/latest/install.html
+
+## С какими столкнулся проблемами
+- Неинформативные сообщения от mattermost(а), при установке последней версии докер образа не работал websocket
+через форумы узнал, что последная версия требует проксирования, даже при локальной разработке
+- Нет никакой информации (крайне мало) по работе с websocket. Через websocket удобнее всего разрабатывать автоматизацию
+так как не требуются формы. Важно лишь указать соглашение по взаимодействию
+- Не работал Websocket на стабильной версии после установки. Выяснилось, websocket работает только по добавленным каналам.
+Для совместимости, установил версию mattermost как у заказчика _7.7.1_
+- python:latest версия докер контейнера весит около 1 GB, пробую загружать образ python:slim. Версия slim
+быстрее запускается, меньше весит(только необходимые пакеты), но иногда нестабильно работает (может выдавать разные 
+статусы ошибок при возникновении запланированных исключениях в python)
+- После установки плагина, бот не добавлялся в канал, по крайней мере визуально сразу не понять что он появился сразу.
+Для этого можно добавить его в директ или добавить в команду как пользователя. Если добавить как пользователя
+его можно добавлять в различные каналы, чего мы и хотим https://forum.mattermost.com/t/add-a-bot-to-channels/8355/15
+
+## Не по теме
+
+Если вам надоел перегрев ноутбука при работе в Oracle VirtualBox, то одно первых решений - отключить запись логов.
+По крайней мере, у меня энергопотребление снизилось с **Очень высокого** до **Высокого**, иногда **Умеренный**.
+Исключение, если вы что-то мониторите.
+
+**Отключение логов** 
+- https://www.virtualbox.org/ticket/11988
+- https://www.virtualbox.org/ticket/13557
