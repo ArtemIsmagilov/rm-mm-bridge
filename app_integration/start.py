@@ -380,7 +380,7 @@ def create_app(test_config=None):
     @app.route('/manifest.json')
     def manifest() -> dict:
         return {
-            'app_id': 'redmine-mattermost-bridge',
+            'app_id': 'redmine-mattermost',
             'display_name': 'Redmine',
             'homepage_url': 'https://github.com/ArtemIsmagilov/redmine-mattermost-integrations.git',
             'app_type': 'http',
@@ -421,7 +421,7 @@ def create_app(test_config=None):
                             'bindings': [
                                 {  # app_info
                                     'description': 'show info about commands app',
-                                    'hint': '[This is command with info about app: redmine-mattermost-bridge]',
+                                    'hint': '[This is command with info about app: redmine]',
                                     # this will be the command displayed to user as /first-command
                                     'label': 'app_info',
                                     'icon': static_path('redmine.png'),

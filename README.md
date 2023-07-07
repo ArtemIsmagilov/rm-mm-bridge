@@ -272,6 +272,54 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 
 ![screen10.png](./imgs/screen10.png "form for ticket")
 
+## Настройка Reverse Proxy для нашего приложения
+
+- в файле .docker.env заменяем APP_HOST_INTERNAl на localhost 
+  >.docker.env<br>
+  > <br>
+  >APP_HOST_INTERNAl=localhost
+  
+- прописываем конфигурацию nginx
+  * установка nginx на сервер
+  ```shell
+  sudo apt update
+  sudo apt install nginx
+  ```
+  * запустить nginx
+  ```shell
+  sudo systemctl start nginx
+  ```
+  * создаём новый файл конфигурации
+  ```shell
+  sudo nano /etc/nginx/sites-enabled/rm_mm_app
+  ```
+  ```
+  server {
+    listen 192.168.31.36:80;  # ваш внешний ip адрес или домен
+  
+    location /app/ {
+      include '/etc/nginx/proxy_params';
+      proxy_pass http://127.0.0.1:8090/;  # ! Замените адрес на свой
+    }
+  
+  }
+  ```
+  
+  * обновите службу nginx
+  ```shell
+  sudo systemctl reload nginx
+  ```
+  
+  * теперь наше приложение доступно внешнему миру по адресу http://192.168.31.36/app/
+ 
+## Настройка HTTPS(зашифрованного соединения) для приложения
+
+* Для удобства можно купить домен, не забудьте заменить внешний ip address на ваш домен
+* Устанавливаем certbot на сервер https://certbot.eff.org/
+* Следуем по инструкции по установке и настройке, certbot всё делает за вас
+  
+
+
 ## Используемые библиотеки:
 
 * `mattermostdriver`.
