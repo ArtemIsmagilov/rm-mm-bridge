@@ -278,6 +278,11 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
   >.docker.env<br>
   > <br>
   >APP_HOST_INTERNAl=localhost
+
+- теперь следует запускать docker контейнер через файл docker-deploy.yml(на удалённом сервере)
+  ```
+  docker compose -f docker-deploy.yml up
+  ```
   
 - прописываем конфигурацию nginx
   * установка nginx на сервер
@@ -285,7 +290,7 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
   sudo apt update
   sudo apt install nginx
   ```
-  * запустить nginx
+  * запустить службу nginx
   ```shell
   sudo systemctl start nginx
   ```
@@ -299,7 +304,7 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
   
     location /app/ {
       include '/etc/nginx/proxy_params';
-      proxy_pass http://127.0.0.1:8090/;  # ! Замените адрес на свой
+      proxy_pass http://127.0.0.1:8090/;
     }
   
   }
