@@ -5,26 +5,19 @@ services:
     image: "python:slim"
     restart: "unless-stopped"
     working_dir: "/app"
-    ports:
-      - "8090:8090"
+
+    network_mode: "host"
 
     env_file:
       - ".docker.env"
+
     environment:
       MATTERMOST_SITEURL: "http://mattermost:8065"
 
     volumes:
       - "./:/app"
-      #- "/etc/letsencrypt/live/example.com/:/etc/letsencrypt/live/example.com/"
 
-    command: > 
+    command: >
       bash -c "pip3 install -r requirements.txt &&  bash run_app.sh"
-
-    networks:
-      dev:
-        ipv4_address: 172.10.1.50
-
-networks:
-  dev:
-    external: true
-
+      
+      

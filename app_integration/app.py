@@ -1,14 +1,17 @@
 import logging, requests, datetime, re, json, asyncio
 from threading import Thread
 from posixpath import join
+
+import click
 from flask import Flask, request, render_template
 from redminelib import Redmine
 from mattermostdriver import Driver
 from mattermostdriver.exceptions import NoAccessTokenProvided, InvalidOrMissingParameters
 from redminelib.exceptions import ResourceNotFoundError, ForbiddenError, AuthError, ImpersonateError
 
-from client_errors import ValidationDateError, InvalidAccessTokenBot
+from client_errors import ValidationDateError, InvalidLoginBot
 from ticket_user import TicketUser
+
 from settings import *
 from constants import *
 
@@ -21,7 +24,6 @@ def create_app(test_config=None):
 
     async def my_event_handler(message):
         load_message = json.loads(message)
-        logging.error('____%s____', load_message)
         event = load_message.get('event', None)
         if event == 'posted':
             data = load_message['data']
@@ -45,7 +47,7 @@ def create_app(test_config=None):
                 resp = send_ephemeral_post(user_id, channel_id, login_in_redmine['message'])
                 return
 
-            with Redmine(redmine_url, key=ADMIN_RM_KEY_API,
+            with Redmine(redmine_url_external, key=rm_admin_key,
                          impersonate=login_in_redmine).session() as redmine:
                 # check correct connection in redmine
                 res = check_exist_account_and_token_in_redmine(redmine, mattermost_login, login_in_redmine)
@@ -67,7 +69,7 @@ def create_app(test_config=None):
                         return
                     else:
                         new_msg = re.sub(fr'(?<!\[){regex.group(0)}',
-                                         f'[#t{ticket_id}]({redmine_url}/issues/{ticket_id})', new_msg, 1)
+                                         f'[#t{ticket_id}]({redmine_url_external}/issues/{ticket_id})', new_msg, 1)
 
             if new_msg != get_msg:
                 resp = bot.posts.patch_post(post_id=post_id, options={
@@ -86,7 +88,7 @@ def create_app(test_config=None):
             return {'type': 'error', 'text': '## Login bot error.'}
 
     def static_path(filename):
-        return f'{app_url}/static/{filename}'
+        return f'{app_url_external}/static/{filename}'
 
     def parsing_input_text(text):
         result = []
@@ -138,7 +140,7 @@ def create_app(test_config=None):
         if type(redmine_login) is dict:
             return redmine_login
 
-        with Redmine(redmine_url, key=ADMIN_RM_KEY_API,
+        with Redmine(redmine_url_external, key=rm_admin_key,
                      impersonate=redmine_login).session() as redmine:
             # exist account and access token in redmine
             res = check_exist_account_and_token_in_redmine(redmine, mattermost_login, redmine_login)
@@ -288,15 +290,15 @@ def create_app(test_config=None):
             priority_name = t.priority.name
             author = t.author.name
             author_id = t.author.id
-            line = f'| [{issue_id}]({redmine_url}/issues/{issue_id}) |' \
-                   f' [{project_name}]({redmine_url}/projects/{project_id}) |' \
+            line = f'| [{issue_id}]({redmine_url_external}/issues/{issue_id}) |' \
+                   f' [{project_name}]({redmine_url_external}/projects/{project_id}) |' \
                    f' {tracker_name} |' \
                    f' {status_name} |' \
-                   f' [{subject}]({redmine_url}/issues/{issue_id}) |' \
+                   f' [{subject}]({redmine_url_external}/issues/{issue_id}) |' \
                    f' {update_date} |' \
                    f' {date_end} |' \
                    f' {priority_name} |' \
-                   f' [{author}]({redmine_url}/users/{author_id}) |\n'
+                   f' [{author}]({redmine_url_external}/users/{author_id}) |\n'
             table += line
 
         return table
@@ -321,14 +323,14 @@ def create_app(test_config=None):
             if hasattr(t, 'assigned_to'):
                 assignee = t.assigned_to.name
                 assigned_id = t.assigned_to.id
-                assignee_line = f' [{assignee}]({redmine_url}/users/{assigned_id}) |\n'
+                assignee_line = f' [{assignee}]({redmine_url_external}/users/{assigned_id}) |\n'
             else:
                 assignee_line = 'None \n'
-            line = f'| [{issue_id}]({redmine_url}/issues/{issue_id}) |' \
-                   f' [{project_name}]({redmine_url}/projects/{project_id}) |' \
+            line = f'| [{issue_id}]({redmine_url_external}/issues/{issue_id}) |' \
+                   f' [{project_name}]({redmine_url_external}/projects/{project_id}) |' \
                    f' {tracker_name} |' \
                    f' {status_name} |' \
-                   f' [{subject}]({redmine_url}/issues/{issue_id}) |' \
+                   f' [{subject}]({redmine_url_external}/issues/{issue_id}) |' \
                    f' {update_date} |' \
                    f' {date_end} |' \
                    f' {priority_name} |' \
@@ -355,7 +357,7 @@ def create_app(test_config=None):
         return result
 
     def _subscribe_team_join(context: dict) -> None:
-        site_url = mattermost_url
+        site_url = mattermost_url_external
         bot_access_token = context['bot_access_token']
 
         url = join(site_url, 'plugins/com.mattermost.apps/api/v1/subscribe')
@@ -377,6 +379,15 @@ def create_app(test_config=None):
         else:
             logging.debug(f'subscribed to team_join event for {site_url}')
 
+    @app.cli.command('create_test_user')
+    @click.argument("email", nargs=1)
+    @click.argument('username', nargs=1)
+    @click.argument('password', nargs=1)
+    def create_test_user(email, username, password):
+        bot.users.create_user(options={'email': email, 'username': username, 'password': password})
+        click.echo(f'Created test user with email: {email}, username: {username}, password: {password}')
+        exit(0)
+
     @app.route('/manifest.json')
     def manifest() -> dict:
         return {
@@ -396,9 +407,9 @@ def create_app(test_config=None):
             'requested_locations': [
                 '/command',
             ],
-            'root_url': app_url,
+            'root_url': app_url_external,
             "http": {
-                "root_url": app_url,
+                "root_url": app_url_external,
             },
 
         }
@@ -532,7 +543,7 @@ def create_app(test_config=None):
         if type(login_in_redmine) is dict:
             return login_in_redmine
 
-        with Redmine(redmine_url, key=ADMIN_RM_KEY_API,
+        with Redmine(redmine_url_external, key=rm_admin_key,
                      impersonate=login_in_redmine).session() as redmine:
 
             # validation2 [have account and token for REST API]
@@ -545,7 +556,7 @@ def create_app(test_config=None):
                 return {'type': 'ok', 'text': 'You haven\'t created issues yet'}
 
             channel_id = create_direct_channel(context)
-            url_reported_issues = f'{redmine_url}/issues?c%5B%5D=project&c%5B%5D=tracker&c%5B%5D=status&c%5B%5D=subject&f%5B%5D=status_id&f%5B%5D=author_id&f%5B%5D=project.status&op%5Bauthor_id%5D=%3D&op%5Bproject.status%5D=%3D&op%5Bstatus_id%5D=o&set_filter=1&sort=updated_on%3Adesc&v%5Bauthor_id%5D%5B%5D=me&v%5Bproject.status%5D%5B%5D=1&v%5Bstatus_id%5D%5B%5D='
+            url_reported_issues = f'{redmine_url_external}/issues?c%5B%5D=project&c%5B%5D=tracker&c%5B%5D=status&c%5B%5D=subject&f%5B%5D=status_id&f%5B%5D=author_id&f%5B%5D=project.status&op%5Bauthor_id%5D=%3D&op%5Bproject.status%5D=%3D&op%5Bstatus_id%5D=o&set_filter=1&sort=updated_on%3Adesc&v%5Bauthor_id%5D%5B%5D=me&v%5Bproject.status%5D%5B%5D=1&v%5Bstatus_id%5D%5B%5D='
 
             resp = bot.posts.create_post(options={
                 'channel_id': channel_id,
@@ -573,7 +584,7 @@ def create_app(test_config=None):
         if type(login_in_redmine) is dict:
             return login_in_redmine
 
-        with Redmine(redmine_url, key=ADMIN_RM_KEY_API,
+        with Redmine(redmine_url_external, key=rm_admin_key,
                      impersonate=login_in_redmine).session() as redmine:
 
             # validation2 [have account and token for REST API]
@@ -586,7 +597,7 @@ def create_app(test_config=None):
                 return {'type': 'ok', 'text': 'There are no tasks for you yet.'}
 
         channel_id = create_direct_channel(context)
-        url_issues_assigned_to_me = f'{redmine_url}/issues?c%5B%5D=project&c%5B%5D=tracker&c%5B%5D=status&c%5B%5D=subject&c%5B%5D=author&f%5B%5D=status_id&f%5B%5D=assigned_to_id&f%5B%5D=project.status&op%5Bassigned_to_id%5D=%3D&op%5Bproject.status%5D=%3D&op%5Bstatus_id%5D=o&set_filter=1&sort=author%2Cpriority%3Adesc%2Cupdated_on%3Adesc&v%5Bassigned_to_id%5D%5B%5D=me&v%5Bproject.status%5D%5B%5D=1&v%5Bstatus_id%5D%5B%5D='
+        url_issues_assigned_to_me = f'{redmine_url_external}/issues?c%5B%5D=project&c%5B%5D=tracker&c%5B%5D=status&c%5B%5D=subject&c%5B%5D=author&f%5B%5D=status_id&f%5B%5D=assigned_to_id&f%5B%5D=project.status&op%5Bassigned_to_id%5D=%3D&op%5Bproject.status%5D=%3D&op%5Bstatus_id%5D=o&set_filter=1&sort=author%2Cpriority%3Adesc%2Cupdated_on%3Adesc&v%5Bassigned_to_id%5D%5B%5D=me&v%5Bproject.status%5D%5B%5D=1&v%5Bstatus_id%5D%5B%5D='
         resp = bot.posts.create_post(options={
             'channel_id': channel_id,
             'message': f'# Ok, {login_in_mattermost}. I look tickets for you.',
@@ -611,7 +622,7 @@ def create_app(test_config=None):
         if type(login_in_redmine) is dict:
             return login_in_redmine
 
-        with Redmine(redmine_url, key=ADMIN_RM_KEY_API,
+        with Redmine(redmine_url_external, key=rm_admin_key,
                      impersonate=login_in_redmine).session() as redmine:
 
             # validation2 [have account and token for REST API]
@@ -750,7 +761,7 @@ def create_app(test_config=None):
         if type(login_in_redmine) is dict:
             return login_in_redmine
 
-        with Redmine(redmine_url, key=ADMIN_RM_KEY_API,
+        with Redmine(redmine_url_external, key=rm_admin_key,
                      impersonate=login_in_redmine).session() as redmine:
 
             # validation2 [have account and token for REST API]
@@ -847,7 +858,7 @@ def create_app(test_config=None):
             return parsed_data
 
         redmine_users = []
-        with Redmine(redmine_url, key=ADMIN_RM_KEY_API).session() as redmine:
+        with Redmine(redmine_url_external, key=rm_admin_key).session() as redmine:
             for u in parsed_data:
 
                 # validation1 [have user in .env file]
@@ -911,20 +922,19 @@ def create_app(test_config=None):
         asyncio.set_event_loop(event_loop_websocket_mattermost)
         bot.init_websocket(my_event_handler)
 
-    if MM_APP_TOKEN:
+    if mm_app_token:
         bot = Driver({
-            'url': MM_HOST,
-            'token': MM_APP_TOKEN,
-            'scheme': MM_PROTOCOL,
-            'port': int(MM_PORT),
+            'scheme': MM_SCHEMA,
+            'url': MM_HOST_EXTERNAL,
+            'port': int(MM_PORT_EXTERNAL),
+            'token': mm_app_token,
             'verify': True,  # Or /path/to/file.pem
         })
         # check correctness access token
         res_valid = check_correctness_access_token_for_app(bot)
         if type(res_valid) is dict:
-            logging.error('Incorrect MM_APP_TOKEN ERROR: %s', res_valid)
-            raise InvalidAccessTokenBot
-
+            logging.error('Login ERROR: %s', res_valid)
+            raise InvalidLoginBot
         else:  # start websocket
             event_loop_websocket_mattermost = asyncio.new_event_loop()
             Thread(target=websocket_mattermost, daemon=True).start()

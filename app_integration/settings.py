@@ -1,26 +1,27 @@
-import os
+import os, multiprocessing
 from dotenv import load_dotenv
 
 load_dotenv('.docker.env')
 
-
-RM_PROTOCOL = os.environ['RM_PROTOCOL']
-RM_HOST = os.environ['RM_HOST']
-RM_PORT = os.environ['RM_PORT']
-
-MM_PROTOCOL = os.environ['MM_PROTOCOL']
-MM_HOST = os.environ['MM_HOST']
-MM_PORT = os.environ['MM_PORT']
-
-APP_PROTOCOL = os.environ['APP_PROTOCOL']
+APP_SCHEMA = os.environ['APP_SCHEMA']
 APP_HOST_INTERNAl = os.environ['APP_HOST_INTERNAl']
+APP_PORT_INTERNAL = os.environ['APP_PORT_INTERNAL']
 APP_HOST_EXTERNAL = os.environ['APP_HOST_EXTERNAL']
-APP_PORT = os.environ['APP_PORT']
+APP_PORT_EXTERNAL = os.environ['APP_PORT_EXTERNAL']
 
-ADMIN_RM_KEY_API = os.environ['ADMIN_RM_KEY_API']
+MM_SCHEMA = os.environ['MM_SCHEMA']
+MM_HOST_EXTERNAL = os.environ['MM_HOST_EXTERNAL']
+MM_PORT_EXTERNAL = os.environ['MM_PORT_EXTERNAL']
 
-MM_APP_TOKEN = os.environ['MM_APP_TOKEN']
+RM_SCHEMA = os.environ['RM_SCHEMA']
+RM_HOST_EXTERNAL = os.environ['RM_HOST_EXTERNAL']
+RM_PORT_EXTERNAL = os.environ['RM_PORT_EXTERNAL']
 
-app_url = f'{APP_PROTOCOL}://{APP_HOST_EXTERNAL}:{APP_PORT}'
-redmine_url = f'{RM_PROTOCOL}://{RM_HOST}:{RM_PORT}'
-mattermost_url = f'{MM_PROTOCOL}://{MM_HOST}:{MM_PORT}'
+rm_admin_key = os.environ['rm_admin_key']
+mm_app_token = os.environ['mm_app_token']
+
+app_url_internal = os.environ['app_url_internal']
+app_url_external = os.environ['app_url_external']
+
+redmine_url_external = os.environ['redmine_url_external']
+mattermost_url_external = os.environ['mattermost_url_external']

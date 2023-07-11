@@ -1,0 +1,19 @@
+# in /etc/nginx/sites-enabled
+
+# http
+server {
+    listen 192.168.31.57:80; # your external ip address
+    location / {
+        include proxy_params;
+        proxy_pass http://127.0.0.1:8090/;
+    }
+}
+
+# https
+server {
+    listen 192.168.31.57:443; # your external ip address
+    location / {
+        include proxy_params;
+        proxy_pass https://127.0.0.1:8090/;
+    }
+}

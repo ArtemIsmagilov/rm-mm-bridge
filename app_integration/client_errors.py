@@ -1,5 +1,6 @@
 class ValidationDateError(Exception):
     pass
 
-class InvalidAccessTokenBot(Exception):
+
+class InvalidLoginBot(Exception):
     pass

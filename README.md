@@ -123,10 +123,6 @@
 * Первым делом удаляю старую версию docker и устанавливаю новую
   https://docs.docker.com/engine/install/ubuntu/
 
-* Установите общую docker сеть для контейнеров, мы назовем её `dev`
-    ```shell
-      docker network create --driver=bridge --subnet=172.10.0.0/16 --gateway=172.10.0.1 dev
-   ```
 
 * копируем ./app_integration/.docker.env.example в ./app_integration/.docker.env
   ```shell
@@ -135,62 +131,29 @@
 
 ## Установка redmine контейнера через docker-compose.yml
 
-Установить docker контейнер redmine мне помогла эта статья https://kurazhov.ru/install-redmine-on-docker-compose/
-
-* добавил себя (например username) в группу
-   ```shell
-  sudo usermod -aG docker username
-   ```
-
-* далее перехожу в `./redmine_server` и ставлю redmine контейнер
-  ```shell
-  cd ./redmine_server && docker compose up
-  ```
+* Для начала, создайте папку docker для работы с контейнером
+    ```bash
+    mkdir ./app_integration/redmine_server/docker/
+    cd ./app_integration/redmine_server/docker/
+    ```
+* Cтавлю redmine контейнер. Образ подходит для разработки и производства https://github.com/sameersbn/docker-redmine.git
+    + **Вам нужно самостоятельно настроить ваш образ в зависимости от ваших предпочтений**
 
 * переходим на сайт с логином admin и паролем admin, меняем пароль, далее `Администрирование` > `Настройки`
     + Раздел `Аутентификация` - Да
     + Раздел `API` - Подключаем REST и JSONP
       ![screen1.png](./imgs/screen1.png "Redmine activate API")
 
-* добавляем уведомление по почте (пример настройки можно посмотреть в config docker контейнера redmine,
-  предварительно войдите в оболочку контейнера)
-  ```shell
-  docker exec -it `container_name` bash
-  ``` 
-  пример находится по следующему пути `config/configuration.yml.example`.
-* итак, добавляем.
-  ```shell
-  nano ./storage/configuration.yml 
-  ``` 
-* впишите следующее и измените нужные параметры.
-    ```yaml
-    production:
-      email_delivery:
-        delivery_method: :smtp
-        smtp_settings:
-          enable_starttls_auto: true
-          address: "smtp.gmail.com"
-          port: 587
-          domain: "smtp.gmail.com"
-          authentication: :plain
-          user_name: "your_email@gmail.com"
-          password: "password" 
-    ```
-* обновляем версию redmine на текущую
-  ```shell
-  docker compose build
-  docker compose restart
-  ```
 
 ## Установка mattermost контейнера через docker-compose.yml
 
 Детали установки контейнера и приложения можно посмотреть тут
 https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 
-* переходим в `./mattermost_server/` и запускаем mattermost контейнер
-  ```shell
-    docker compose up
-    ```
+Но мы будем использовать образ, который поддерживает гибкую настройку https://github.com/mattermost/docker.git
+    + **Вам нужно самостоятельно настроить ваш образ в зависимости от ваших предпочтений**
+
+
 * mattermost контейнер запущен
   ![screen2.png](./imgs/screen2.png "Home page for loging")
 
@@ -207,25 +170,21 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 * давайте удостоверимся, что приложение действительно работает и может пинговаться с другими docker контейнерами
   ```shell
   docker exec -it conteiner_name_app bash
-  curl -I http://172.10.1.10:3000/
+  curl -I http://host_redmine:port_redmine/
   ```
   > HTTP/1.1 200 OK
   ```shell
-  curl -I http://172.10.1.30:8065/
+  curl -I http://host_mattermost:port_mattermost/
   ```
   > HTTP/1.1 405 Method Not Allowed
-
-    - или можно просто посмотреть конфиг docker сети `dev`. Все запущенные контейнеры находятся в одной сети
-      ```shell
-      docker network inspect dev
-      ```
+  
 
 * Чтобы установить приложение, нужно перейти на ваш запущенный mattermost сайт и ввести `/`(slash) команду по примеру из
   официальной документации. https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
   > #### Install the App on Mattermost
   > `/apps install http http://mattermost-apps-python-hello-world:8090/manifest.json`
 
-  В моем случае, я добавил команду `/apps install http http://172.10.1.50:8090/manifest.json`
+  В моем случае, я добавил команду `/apps install http http://external_ip_address:8090/manifest.json`
 * Если вам нужно удалить его, то смотрим здесь
   https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/#uninstall-the-app
 * После успешной загрузки нужно сгенерировать токен для приложения, добавить его в `./app_integration/.docker.env`
@@ -246,10 +205,10 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
     - Создавать ссылки перенаправляющие в redmine
 
 ### Полезные комманды
-- docker compose up _Create and start containers_
-- docker compose down _Stop and remove containers, networks_
+- docker compose up - _Create and start containers_ 
+- docker compose down -  _Stop and remove containers, networks_ 
 
-(docker compose commands)[https://docs.docker.com/compose/reference/]
+[docker compose commands](https://docs.docker.com/compose/reference/)
 
 
 ### Информация о приложении `app_info`
@@ -273,16 +232,6 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 ![screen10.png](./imgs/screen10.png "form for ticket")
 
 ## Настройка Reverse Proxy для нашего приложения
-
-- в файле .docker.env заменяем APP_HOST_INTERNAl на localhost 
-  >.docker.env<br>
-  > <br>
-  >APP_HOST_INTERNAl=localhost
-
-- теперь следует запускать docker контейнер через файл docker-deploy.yml(на удалённом сервере)
-  ```
-  docker compose -f docker-deploy.yml up
-  ```
   
 - прописываем конфигурацию nginx
   * установка nginx на сервер
@@ -296,31 +245,39 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
   ```
   * создаём новый файл конфигурации
   ```shell
-  sudo nano /etc/nginx/sites-enabled/rm_mm_app
+  sudo nano /etc/nginx/sites-enabled/app
   ```
   ```
-  server {
-    listen 192.168.31.36:80;  # ваш внешний ip адрес или домен
-  
-    location /app/ {
-      include '/etc/nginx/proxy_params';
-      proxy_pass http://127.0.0.1:8090/;
+    # in /etc/nginx/sites-enabled/
+    
+    # http
+    server {
+        listen 192.168.31.57:80; # your external ip address
+        location / {
+            include proxy_params;
+            proxy_pass http://127.0.0.1:8090/;
+        }
     }
-  
-  }
+    
+    # https
+    server {
+        listen 192.168.31.57:443; # your external ip address
+        location / {
+            include proxy_params;
+            proxy_pass https://127.0.0.1:8090/;
+        }
+    }
+
   ```
   
   * обновите службу nginx
   ```shell
   sudo systemctl reload nginx
   ```
-  
-  * теперь наше приложение доступно внешнему миру по адресу http://192.168.31.36/app/
  
 ## Настройка HTTPS(зашифрованного соединения) для приложения
 
-* Для удобства можно купить домен, не забудьте заменить внешний ip address на ваш домен
-* Устанавливаем certbot на сервер https://certbot.eff.org/
+* Устанавливаем certbot на сервер, https://certbot.eff.org/
 * Следуем по инструкции по установке и настройке, certbot всё делает за вас
   
 
@@ -350,6 +307,8 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 * HTTPS на Flask - https://blog.miguelgrinberg.com/post/running-your-flask-application-over-https
 * Прокси приложения - https://dvmn.org/encyclopedia/web-server/deploy-django-nginx-gunicorn/
 * Документация Gunicorn - https://docs.gunicorn.org/en/latest/install.html
+* Redmine docker в production - https://github.com/sameersbn/docker-redmine.git
+* Mattermost docker в production - https://github.com/mattermost/docker.git
 
 ## С какими столкнулся проблемами
 - Неинформативные сообщения от mattermost(а), при установке последней версии докер образа не работал websocket
