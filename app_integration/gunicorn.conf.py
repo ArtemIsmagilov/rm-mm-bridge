@@ -8,7 +8,7 @@ access_log_format = 'h:%(h)s l:%(l)s u:%(u)s t:%(t)s r:"%(r)s" s:%(s)s b:%(b)s f
 wsgi_app = 'app:create_app()'
 loglevel = 'debug'
 
-# certfile = '/etc/letsencrypt/live/www.example.com/fullchain'
-# keyfile = '/etc/letsencrypt/live/www.example.com/privkey'
+# certfile = '/etc/letsencrypt/live/www.example.com/fullchain.pem'
+# keyfile = '/etc/letsencrypt/live/www.example.com/privkey.pem'
 
 # check_config = True
