@@ -152,6 +152,8 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 
 Но мы будем использовать образ, который поддерживает гибкую настройку https://github.com/mattermost/docker.git
     + **Вам нужно самостоятельно настроить ваш образ в зависимости от ваших предпочтений**
+    + В этой версии не настроена поддержа plugin_app, поэтому следуют расширить параметры из https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
+
 
 
 * mattermost контейнер запущен
