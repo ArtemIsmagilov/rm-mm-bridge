@@ -84,8 +84,8 @@ def create_app(test_config=None):
             return {'type': 'error', 'text': '## App haven\'t access token.'}
         except NoAccessTokenProvided:
             return {'type': 'error', 'text': '## App access token is not correct or is expired.'}
-        except Exception:
-            return {'type': 'error', 'text': '## Login bot error.'}
+        except Exception as exp:
+            return {'type': 'error', 'text': f'## Login bot error. {exp}'}
 
     def static_path(filename):
         return f'{app_url_external}/static/{filename}'
@@ -243,6 +243,8 @@ def create_app(test_config=None):
                     'text': f'### Account {mattermost_login}({redmine_login}) doesn\'t exist in redmine or deactivated.'}
         except AuthError:
             return {'type': 'error', 'text': '### Your app haven\'t redmine access token.'}
+        except Exception as exp:
+            return {'type': 'error', 'text': f'Bot Error: {exp}\nfunction - check_exist_account_and_token_in_redmine'}
 
     def check_included_user_in_project(redmine, project_identifier, mattermost_login):
         try:

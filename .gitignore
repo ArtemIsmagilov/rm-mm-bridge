@@ -5,7 +5,6 @@ venv
 docker/
 mm-logs
 storage
-
 .idea
 
 # from flask documentation

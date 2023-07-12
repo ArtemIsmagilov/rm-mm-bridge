@@ -18,6 +18,8 @@ services:
       - "./:/app"
 
     command: >
-      bash -c "pip3 install -r requirements.txt &&  bash run_app.sh"
-      
-      
+      bash -c "pip install -r requirements.txt
+      && python3 patch_driver.py
+      && bash run_app.sh
+      "
+
