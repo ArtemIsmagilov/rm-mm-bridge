@@ -5,6 +5,26 @@
 * **Проект создан для интеграции сервиса mattermost и redmine.**
 * **Данная версия поддерживает локальную и глобальную интеграцию.**
 
+## Содержание
+- [Преимущества](#преимущества)
+- [Актуальность](#актуальность)
+- [Команды](#команды)
+- [Некоторое соглашение](#некоторое-соглашение)
+- [Тестирование приложения](#тестирование-приложения)
+- [Схема проекта](#схема-проекта)
+- [Настраиваем среду разработки](#настраиваем-среду-разработки)
+- [Установка redmine контейнера через docker-compose.yml](#установка-redmine-контейнера-через-docker-composeyml)
+- [Установка mattermost контейнера через docker-compose.yml](#установка-mattermost-контейнера-через-docker-composeyml)
+- [Установка интеграции Redmine и Mattermost](#установка-интеграции-redmine-и-mattermost)
+- [Полезные docker команды](#полезные-docker-команды)
+- [Настройка Reverse Proxy для нашего приложения](#настройка-reverse-proxy-для-нашего-приложения)
+- [Настройка HTTPS(зашифрованного соединения) для приложения](#настройка-httpsзашифрованного-соединения-для-приложения)
+- [Для администратора](#для-администратора)
+- [Используемые библиотеки](#используемые-библиотеки)
+- [Полезные ссылки](#полезные-ссылки)
+- [С какими столкнулся проблемами](#с-какими-столкнулся-проблемами)
+- [Не по теме](#не-по-теме)
+
 ## Преимущества
 
 * Автоматическое создание тикетов. Одним сообщением можно создать несколько тикетов.
@@ -26,7 +46,8 @@
 > *Параллельно поручения живут в тикетах в багтрекере.*
 > *Хочется, чтобы все поручения жили в багтрекере, там мониторились и выполнялись.*
 
-## За интеграцию отвечает самостоятельное приложение на python с библиотекой Flask в виде бота.
+## Команды
+* За интеграцию отвечает самостоятельное приложение на python с библиотекой Flask в виде бота.
 
 * Точка входа для интеграции `/integration_with_redmine` *commands
 
@@ -81,7 +102,7 @@
   > _Must have create_post_ephemeral permission **(currently only given to system admin)**_
   
 
-## Тестирование приложения будет состоять из небольших пунктов.
+## Тестирование приложения
 
 1. Предустановить необходимые пакеты
 2. Создать общую docker сеть
@@ -206,7 +227,7 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
       при вводе невалидной информации.
     - Создавать ссылки перенаправляющие в redmine
 
-### Полезные комманды
+## Полезные docker команды
 - docker compose up - _Create and start containers_ 
 - docker compose down -  _Stop and remove containers, networks_ 
 
@@ -247,29 +268,7 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
   ```
   * создаём новый файл конфигурации
   ```shell
-  sudo nano /etc/nginx/sites-enabled/app
-  ```
-  ```
-    # in /etc/nginx/sites-enabled/
-    
-    # http
-    server {
-        listen 192.168.31.57:80; # your external ip address
-        location / {
-            include proxy_params;
-            proxy_pass http://127.0.0.1:8090/;
-        }
-    }
-    
-    # https
-    server {
-        listen 192.168.31.57:443; # your external ip address
-        location / {
-            include proxy_params;
-            proxy_pass https://127.0.0.1:8090/;
-        }
-    }
-
+  sudo cp ./app_integration/app_nginx /etc/nginx/sites-enabled/app_nginx
   ```
   
   * обновите службу nginx
@@ -282,9 +281,23 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 * Устанавливаем certbot на сервер, https://certbot.eff.org/
 * Следуем по инструкции по установке и настройке, certbot всё делает за вас
   
+## Для администратора
 
+Как добавить интеграцию у себя на сервере?
 
-## Используемые библиотеки:
+1. Предварительно у вас должны быть необходимые пакеты упомянутые выше
+2. клонировать https://github.com/ArtemIsmagilov/redmine-mattermost-integrations.git и перейти в папку app_integration
+3. копировать .docker.env.exampple в .docker.env в текущей директории и заменить необходимые параметры
+4. копировать app_nginx в /etc/nginx/sites-enables/ рядом в default ссылкой, заменить необходимые параметры
+(порты, пути к сертификатам). Для тестирования используется конфигурация http, 
+для использования в производстве используется https
+5. измените параметры gunicorn.conf.py(accesslog*=имя файла, loglevel='error', количество воркеров, путь к сертификатам)
+6. запустите докер контейнер
+7. установить приложение командой в mattermost /apps install http ...
+8. создайте токен для бота, предоставьте права для REST API операций. Добавьте бота в команду как пользователя
+9. добавьте токен, необходимых пользователей в .docker.env и заново запустите docker контейнер
+
+## Используемые библиотеки
 
 * `mattermostdriver`.
     - Github https://github.com/Vaelor/python-mattermost-driver
