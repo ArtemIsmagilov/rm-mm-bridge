@@ -89,11 +89,11 @@
   https://drive.google.com/file/d/16RAOr7d5huqCDg7T4-Ww5wqewNmREY-n/view?usp=sharing
 
 
-+ Для идентификации пользователя Redmine и Mattermost впишите пользовательский **(логин в redmine)=(логин в mattermost)**. Пример
++ Для идентификации пользователя Redmine и Mattermost впишите пользовательский **(логин в redmine)=(логин в mattermost)** в `.docker.env`. Пример
   - **mattermost_username=redmine_username**
   - **seconad_username_in_mattermost=second_username_in_redmine**
 
-**Строго, сначала логин маттермоста=логин редмайна**
+  **Строго, сначала логин маттермоста=логин редмайна**
 
 + Преобразование текста тикета в ссылку требует прав администратора для приложения. Из документации
   > ### Create a ephemeral post <br>
