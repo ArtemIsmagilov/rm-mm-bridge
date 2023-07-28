@@ -347,4 +347,4 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 
 **Отключение логов** 
 - https://www.virtualbox.org/ticket/11988
-- https://www.virtualbox.org/ticket/13557
+- https://ubuntuforums.org/showthread.php?t=879256
