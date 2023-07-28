@@ -200,6 +200,11 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
   curl -I http://host_mattermost:port_mattermost/
   ```
   > HTTP/1.1 405 Method Not Allowed
+
+  curl команды
+  - `GET` curl -I http://localhost:5000/*endpoint
+  - `POST` curl --header "Content-Type: application/json"   --request POST   --data '{"item1":"data1","item2":"data2"}' 
+     http://127.0.0.1:5000/*endpoint
   
 
 * Чтобы установить приложение, нужно перейти на ваш запущенный mattermost сайт и ввести `/`(slash) команду по примеру из
