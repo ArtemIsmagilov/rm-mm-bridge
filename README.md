@@ -353,3 +353,5 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 **Отключение логов** 
 - https://www.virtualbox.org/ticket/11988
 - https://ubuntuforums.org/showthread.php?t=879256
+- Выбираем папку C:\Users\user\VirtualBox VMs\Ubuntu\Logs правой кнопкой мыши -> `Безопасность` -> `Изменить` -> Выбираем нашего пользователя от которого устанавливался VBox -> Ставим галочку `Запретить запись` -> `Применить`. Теперь запись логов будет не доступна. Это освободит процессор и память от лишней работы.
+  
