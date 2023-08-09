@@ -2,7 +2,8 @@ import subprocess
 
 
 def patch_mattermostdriver():
-    result = subprocess.run('find / -type f -name "websocket.py"', shell=True, stdout=subprocess.PIPE, encoding='utf-8')
+    cmd = 'find / -type f -path "*/site-packages/mattermostdriver/websocket.py"'
+    result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, encoding='utf-8')
     print(f"{result.stdout=}", flush=True)
     path_file = result.stdout.strip()
     if path_file:
