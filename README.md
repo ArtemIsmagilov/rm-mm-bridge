@@ -299,8 +299,10 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 5. измените параметры gunicorn.conf.py(accesslog*=имя файла, loglevel='error', количество воркеров, путь к сертификатам)
 6. запустите докер контейнер
 7. установить приложение командой в mattermost /apps install http ...
-8. создайте токен для бота, предоставьте права для REST API операций. Добавьте бота в команду как пользователя
-9. добавьте токен, необходимых пользователей в .docker.env и заново запустите docker контейнер
+8. создайте токен для бота, предоставьте права для REST API операций. Добавьте бота в команду как пользователя - требуется для работы с websocket [Subscriptions](https://developers.mattermost.com/integrate/apps/functionality/subscriptions/)
+   > ### Note:
+   > #### Bots need to join a channel before subscribing to that channel’s events. Similarly, bots need to join a team before subscribing to that team’s events.
+10. добавьте токен, необходимых пользователей в .docker.env и заново запустите docker контейнер
 
 ## Используемые библиотеки
 
