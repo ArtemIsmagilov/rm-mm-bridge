@@ -338,23 +338,23 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 
 
 
-### Информация о приложении `app_info`
+### Информация о приложении `help`
 
 ![screen8.png](./imgs/screen8.png "Help info.")
 
-### Создать задания `create_tickets`
+### Создать задания `new_tasks`
 
 ![screen5.png](./imgs/screen5.png "Create tickets.")
 
-### Посмотреть задания назначенные мне `tickets_for_me`
+### Посмотреть задания назначенные мне `tasks_for_me`
 
 ![screen6.png](./imgs/screen6.png "Look ticket for me.")
 
-### Посмотреть задания назначенные мною `my_tickets`
+### Посмотреть задания назначенные мною `tasks_by_me`
 
 ![screen7.png](./imgs/screen7.png "Look my tickets.")
 
-### Создать тикет по форме Redmine `create_tickets_by_form`
+### Создать тикет по форме Redmine `new_task`
 
 ![screen10.png](./imgs/screen10.png "form for ticket")
 
