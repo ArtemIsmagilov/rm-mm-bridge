@@ -1,0 +1,19 @@
+
+
+    1. Купить колбасы   asdasdas sdasd asdasdsa asdasdasd
+            asdasdas sdasd asdasdsa asdasdasdasdasdas sdasd asdasdsa asdasdasd
+asdasdas sdasd asdasdsa asdasdasdasdasdas sdasd asdasdsa asdasdasd
+            @{{ username1 }}    20.12.2023
+
+
+
+
+
+            2. Написать симфонию    @{{ username2 }}                     20.12.2023
+
+            3. 📝 В Яндекс Календаре назначаются встречи. Нужно как по ссылке YandexCalendar(plugin)
+
+            Присылать утром список встреч на день. @{{ username2 }} 20.12.2023
+
+
+

@@ -17,6 +17,7 @@
 - [Установка mattermost контейнера через docker-compose.yml](#установка-mattermost-контейнера-через-docker-composeyml)
 - [Установка интеграции Redmine и Mattermost](#установка-интеграции-redmine-и-mattermost)
 - [Полезные docker команды](#полезные-docker-команды)
+- [Автотесты](#автотесты)
 - [Настройка Reverse Proxy для нашего приложения](#настройка-reverse-proxy-для-нашего-приложения)
 - [Настройка HTTPS(зашифрованного соединения) для приложения](#настройка-httpsзашифрованного-соединения-для-приложения)
 - [Для администратора](#для-администратора)
@@ -49,15 +50,15 @@
 ## Команды
 * За интеграцию отвечает самостоятельное приложение на python с библиотекой Flask в виде бота.
 
-* Точка входа для интеграции `/integration_with_redmine` *commands
+* Точка входа для интеграции `/redmine` *commands
 
-| Поддерживаемы команды | Описание                            |
-|-----------------------|-------------------------------------|
-| app_info              | Возможности приложения              |
-| create_ticket_by_form | Создать задание в форме             |
-| create_tickets        | Создать задания                     |
-| tickets_for_me        | Посмотреть задания назначенные мне  |
-| my_tickets            | Посмотреть задания назначенные мною |
+| Команды       | Описание                                                                                |
+|---------------|-----------------------------------------------------------------------------------------|
+| /help         | Краткая справочная информация о приложении и его командах                               |
+| /new_task     | Создать одну задачу в форме Redmine                                                     |
+| /new_tasks    | Создать одну или несколько задач для одного или нескольких пользователей в одну команду |
+| /tasks_by_me  | Показать задачи, которые я поручил другим                                               |
+| /tasks_for_me | Показать поставленные мне задачи                                                        |
 
 
 ## Некоторое соглашение
@@ -109,8 +110,8 @@
 3. Установить докер контейнер redmine и запустить
 4. Установить докер контейнер mattermost и запустить
 5. После активации REST API на локальных сервисах добавить необходимые переменные окружения в файл
-   `.docker.env` приложения. Файл находится в `./app_integration/.docker.env`
-6. После добавления всех необходимых переменных в `./app_integration/.docker.env` установить докер контейнер
+   `.docker.env` приложения. Файл находится в `./wsgi/.env`
+6. После добавления всех необходимых переменных в `./wsgi/.env` установить докер контейнер
    mattermost-redmine интеграции и запустить
 7. Установить приложение в mattermost командой c параметрами хоста и порта виртуального окружения
 
@@ -119,12 +120,12 @@
    ```
 
 8. Сгенерируйте токен для приложения через настройки
-9. Добавьте токен в  `./app_integration/.docker.env`
+9. Добавьте токен в  `./wsgi/.env`
 10. Добавьте токен администратора и дайте разрешение на создание постов. Для работы фичи t#ID необходимо установить 
 бота в System Admin.
-11. Добавьте всех необходимых пользователей **mattermost_login=redmine_login** в  `./app_integration/.docker.env`, 
+11. Добавьте всех необходимых пользователей **mattermost_login=redmine_login** в  `./wsgi/.env`, 
 предварительно убедитесь что логины корректны и аккаунты активны.
-12. Перезапустите докер контейнер в папке ./app_integration
+12. Перезапустите докер контейнер в папке `./wsgi`
     ```shell
     docker compose stop
     docket compose up
@@ -145,24 +146,24 @@
   https://docs.docker.com/engine/install/ubuntu/
 
 
-* копируем ./app_integration/.docker.env.example в ./app_integration/.docker.env
+* копируем ./wsgi/.env.example в ./wsgi/.env
   ```shell
-  cp ./app_integration/.docker.env.example app_integration/.docker.env
+  cp ./wsgi/.env.example ./wsgi/.env
   ```
 
 ## Установка redmine контейнера через docker-compose.yml
 
 * Для начала, создайте папку docker для работы с контейнером
     ```bash
-    mkdir ./app_integration/redmine_server/docker/
-    cd ./app_integration/redmine_server/docker/
+    mkdir ./rm
+    cd ./rm
     ```
 * Cтавлю redmine контейнер. Образ подходит для разработки и производства https://github.com/sameersbn/docker-redmine.git
     + **Вам нужно самостоятельно настроить ваш образ в зависимости от ваших предпочтений**
 
 * переходим на сайт с логином admin и паролем admin, меняем пароль, далее `Администрирование` > `Настройки`
     + Раздел `Аутентификация` - Да
-    + Раздел `API` - Подключаем REST и JSONP
+    + Раздел `API` - Подключаем REST
       ![screen1.png](./imgs/screen1.png "Redmine activate API")
 
 
@@ -173,19 +174,19 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 
 Но мы будем использовать образ, который поддерживает гибкую настройку https://github.com/mattermost/docker.git
     + **Вам нужно самостоятельно настроить ваш образ в зависимости от ваших предпочтений**
-    + В этой версии не настроена поддержа plugin_app, поэтому следуют расширить параметры из https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
-
+    + В этой версии не настроена поддержа plugin_app, поэтому следуют расширить параметры из 
+      https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 
 
 * mattermost контейнер запущен
   ![screen2.png](./imgs/screen2.png "Home page for loging")
 
-* нам нужно сгенерировать токен админа для REST API запросов и добавить в `./app_inegration/docker.env`.
+* нам нужно сгенерировать токен админа для REST API запросов и добавить в `./wsgi/.env`.
   ![screen3.png](./imgs/screen3.png "Generate access admin token")
 
 ## Установка интеграции Redmine и Mattermost
 
-* переходим в директорию ./app_integration и запускаем последний контейнер с ботом-приложением.
+* переходим в директорию ./wsgi и запускаем последний контейнер с ботом-приложением.
     ```shell
       docker compose up
     ```
@@ -215,7 +216,7 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
   В моем случае, я добавил команду `/apps install http http://external_ip_address:8090/manifest.json`
 * Если вам нужно удалить его, то смотрим здесь
   https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/#uninstall-the-app
-* После успешной загрузки нужно сгенерировать токен для приложения, добавить его в `./app_integration/.docker.env`
+* После успешной загрузки нужно сгенерировать токен для приложения, добавить его в `./wsgi/.env`
   Сгенерировать токен нужно в разделе `Интеграции` > `Аккаунты ботов` > `@redmine`.
   Также предоставьте доступ бота к Direct сообщениям, назначьте ему роль администратор так как интеграция работает 
 через личные сообщения. Интеграция работает c API токеном.
@@ -233,10 +234,108 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
     - Создавать ссылки перенаправляющие в redmine
 
 ## Полезные docker команды
+
 - docker compose up - _Create and start containers_ 
 - docker compose down -  _Stop and remove containers, networks_ 
 
 [docker compose commands](https://docs.docker.com/compose/reference/)
+
+
+## Автотесты
+
+- мы тестируем только клиентскую часть
+- предварительно необходимо запустить докер контейнеры
+- создайте файл `.test.env` и добавьте необходимые переменные для тестирования
+  Пример
+  ```text
+  APP_SCHEMA=http
+  APP_HOST_INTERNAl=127.0.0.1
+  APP_PORT_INTERNAL=8090
+  APP_HOST_EXTERNAL=127.0.0.1
+  APP_PORT_EXTERNAL=8090
+  
+  MM_SCHEMA=http
+  MM_HOST_EXTERNAL=127.0.0.1
+  MM_PORT_EXTERNAL=8065
+  
+  RM_SCHEMA=http
+  RM_HOST_EXTERNAL=127.0.0.1
+  RM_PORT_EXTERNAL=3000
+  
+  rm_admin_key=redmine_secret
+  mm_app_token=app_secret
+  
+  app_url_internal=${APP_SCHEMA}://${APP_HOST_INTERNAl}:${APP_PORT_INTERNAL}
+  app_url_external=${APP_SCHEMA}://${APP_HOST_EXTERNAL}:${APP_PORT_EXTERNAL}
+  
+  redmine_url_external=${RM_SCHEMA}://${RM_HOST_EXTERNAL}:${RM_PORT_EXTERNAL}
+  mattermost_url_external=${MM_SCHEMA}://${MM_HOST_EXTERNAL}:${MM_PORT_EXTERNAL}
+  
+  # testing mattermost client
+  test_mm_email1=t1@mail
+  test_mm_username1=t1
+  test_mm_password1=super_secret
+  test_mm_first_name1=TestMattermost
+  test_mm_last_name1=UserMattermost
+  
+  test_mm_email2=t2@mail
+  test_mm_username2=t2
+  test_mm_password2=super_secret
+  test_mm_first_name2=TestMattermost2
+  test_mm_last_name2=UserMattermost2
+  
+  # redmine clients
+  test_rm_email1=t1@mail.ru
+  test_rm_username1=test.user1
+  test_rm_password1=super_secret
+  test_rm_first_name1=Test1
+  test_rm_last_name1=User1
+  
+  test_rm_email2=t2@mail.ru
+  test_rm_username2=test.user2
+  test_rm_password2=super_secret
+  test_rm_first_name2=Test2
+  test_rm_last_name2=User2
+  
+  # usernames mattermost with redmine account
+  # For example:
+  # mattermost_username=redmine_username
+  # seconad_username_in_mattermost=second_username_in_redmine
+  # and etc...
+  
+  t1=test.user1
+  t2=test.user2
+  ```
+- запускаем тесты и смотрим покрытие кода
+  ```bash
+  coverage run -m pytest
+  ```
+  
+  ```bash
+    coverage report 
+  ```  
+
+  ```text
+  Name                          Stmts   Miss  Cover
+  -------------------------------------------------
+  converters.py                     9      0   100%
+  tests/__init__.py                 0      0   100%
+  tests/blocks_code/blocks.py      30      0   100%
+  tests/conftest.py                37      3    92%
+  tests/test_app.py               292      0   100%
+  wsgi/__init__.py                187      9    95%
+  wsgi/client_errors.py             6      0   100%
+  wsgi/constants.py                 2      0   100%
+  wsgi/decorators.py               29      3    90%
+  wsgi/handlers.py                225     27    88%
+  wsgi/my_bot.py                   20      2    90%
+  wsgi/redmine_api.py              48      0   100%
+  wsgi/settings.py                 59      2    97%
+  wsgi/views.py                    26      2    92%
+  -------------------------------------------------
+  TOTAL                           970     48    95%
+  ```
+
 
 
 ### Информация о приложении `app_info`
@@ -273,7 +372,7 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
   ```
   * создаём новый файл конфигурации
   ```shell
-  sudo cp ./app_integration/app_nginx /etc/nginx/sites-enabled/app_nginx
+  sudo cp ./wsgi/app_nginx /etc/nginx/sites-enabled/app_nginx
   ```
   
   * обновите службу nginx
@@ -291,7 +390,7 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 Как добавить интеграцию у себя на сервере?
 
 1. Предварительно у вас должны быть необходимые пакеты упомянутые выше
-2. клонировать https://github.com/ArtemIsmagilov/redmine-mattermost-integrations.git и перейти в папку app_integration
+2. клонировать https://github.com/ArtemIsmagilov/redmine-mattermost-integrations.git и перейти в папку wsgi/
 3. копировать .docker.env.exampple в .docker.env в текущей директории и заменить необходимые параметры
 4. копировать app_nginx в /etc/nginx/sites-enables/ рядом в default ссылкой, заменить необходимые параметры
 (порты, пути к сертификатам). Для тестирования используется конфигурация http, 
@@ -306,8 +405,8 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 
 ## Используемые библиотеки
 
-* `mattermostdriver`.
-    - Github https://github.com/Vaelor/python-mattermost-driver
+* `mattermostautodriver`.
+    - Github https://github.com/embl-bio-it/python-mattermost-autodriver
     - Документация https://vaelor.github.io/python-mattermost-driver
 * `python-redmine`.
     - Github https://github.com/maxtepkeev/python-redmine
@@ -345,6 +444,12 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 - После установки плагина, бот не добавлялся в канал, по крайней мере визуально сразу не понять что он появился сразу.
 Для этого можно добавить его в директ или добавить в команду как пользователя. Если добавить как пользователя
 его можно добавлять в различные каналы, чего мы и хотим https://forum.mattermost.com/t/add-a-bot-to-channels/8355/15
+
+## Дополнительные работы
+
+- Необходимо рефакторинг кода, слишком грязный 
+- Добавить возможность звонка в Яндекс Телемост
+- Дописать недостающие теста, также необходим рефакторинг
 
 ## Не по теме
 

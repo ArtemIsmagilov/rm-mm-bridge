@@ -1,5 +1,0 @@
-Flask==2.3.2
-python-dotenv==1.0.0
-python-redmine==2.4.0
-mattermostdriver==7.3.2
-gunicorn==20.1.0

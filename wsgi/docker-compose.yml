@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+  redmine-mattermost-bridge:
+    image: "python:slim"
+    restart: "unless-stopped"
+    working_dir: "/app"
+
+    network_mode: "host"
+
+    env_file:
+      - ".env"
+
+    environment:
+      MATTERMOST_SITEURL: "http://mattermost:8065"
+
+    volumes:
+      - "./:/app"
+
+    command: >
+      bash -c "pip install -r requirements.txt
+      && bash run_app.sh
+      "
+

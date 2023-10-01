@@ -1,4 +1,5 @@
-.docker.env
+.env
+.test.env
 example_response.py
 
 venv

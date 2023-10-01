@@ -1,0 +1,21 @@
+version: '3.9'
+services:
+
+   postgres:
+     image: postgres:alpine
+     environment:
+       POSTGRES_PASSWORD: "strong_pass"
+       POSTGRES_DB: "redmine"
+     restart: "unless-stopped"
+
+   redmine:
+     image: redmine
+     ports:
+       - 3000:3000
+     environment:
+       REDMINE_DB_POSTGRES: "postgres"
+       REDMINE_DB_USERNAME: "postgres"
+       REDMINE_DB_PASSWORD: "strong_pass"
+       REDMINE_DB_DATABASE: "redmine"
+       REDMINE_SECRET_KEY_BASE: "…"
+     restart: "unless-stopped"
