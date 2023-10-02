@@ -1,7 +1,7 @@
 version: "3.9"
 
 services:
-  redmine-mattermost-bridge:
+  app:
     image: "python:slim"
     restart: "unless-stopped"
     working_dir: "/app"
@@ -9,7 +9,7 @@ services:
     network_mode: "host"
 
     env_file:
-      - ".env"
+      - "wsgi/.env"
 
     environment:
       MATTERMOST_SITEURL: "http://mattermost:8065"
@@ -18,7 +18,7 @@ services:
       - "./:/app"
 
     command: >
-      bash -c "pip install -r requirements.txt
+      bash -c "pip install -r wsgi/requirements.txt
       && bash run_app.sh
       "
 

@@ -10,13 +10,15 @@ def create_app(test_config=None):
     from wsgi import views
     from converters import sing_plur_tasks, choose_name, create_full_name
     from wsgi.constants import EXPAND_DICT, OPTIONS_DONE_FOR_FORM
+    from wsgi.settings import envs
 
+    if envs.DEBUG:
+        logging.basicConfig(
+            level=logging.DEBUG,
+            format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
+            datefmt='%d-%m-%Y %H:%M:%S'
+        )
 
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s,%(msecs)03d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-        datefmt='%d-%m-%Y %H:%M:%S'
-    )
     app = Flask(__name__, static_url_path='/static', static_folder='./static')
 
     @app.route('/manifest.json')

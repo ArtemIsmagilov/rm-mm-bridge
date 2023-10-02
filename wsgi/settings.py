@@ -12,6 +12,8 @@ class Conf(ABC):
 
         load_dotenv(filename)
 
+        self.DEBUG = True if os.environ['DEBUG'].lower() in ('true', 'y', 'yes',) else False
+
         self.APP_SCHEMA = os.environ['APP_SCHEMA']
         self.APP_HOST_INTERNAl = os.environ['APP_HOST_INTERNAl']
         self.APP_PORT_INTERNAL = os.environ['APP_PORT_INTERNAL']

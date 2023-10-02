@@ -407,10 +407,10 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 
 * `mattermostautodriver`.
     - Github https://github.com/embl-bio-it/python-mattermost-autodriver
-    - Документация https://vaelor.github.io/python-mattermost-driver
+    - Документация https://embl-bio-it.github.io/python-mattermost-autodriver
 * `python-redmine`.
     - Github https://github.com/maxtepkeev/python-redmine
-    - Документация https://python-redmine.com/index.html
+    - Документация https://python-redmine.com
 
 ## Полезные ссылки
 
@@ -447,9 +447,9 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 
 ## Дополнительные работы
 
-- Необходимо рефакторинг кода, слишком грязный 
+- Рефакторинг кода
 - Добавить возможность звонка в Яндекс Телемост
-- Дописать недостающие теста, также необходим рефакторинг
+- Добавить русский язык
 
 ## Не по теме
 

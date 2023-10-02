@@ -16,7 +16,7 @@ from wsgi.settings import envs
 async def my_event_handler(message):
     load_message = json.loads(message)
     event = load_message.get('event', None)
-    logging.info('my_event_handler', event)
+    logging.info('my_event_handler: %s', event)
     if event == 'posted':
         data = load_message['data']
         post = json.loads(data['post'])
@@ -62,11 +62,7 @@ async def my_event_handler(message):
                     new_msg = re.sub(fr'(?<!\[){regex.group(0)}', issue_link, new_msg, 1)
 
         if new_msg != get_msg:
-            resp = bot.posts.patch_post(post_id=post_id, options={
-                'id': post_id,
-                'message': new_msg
-            }
-                                        )
+            resp = bot.posts.patch_post(post_id=post_id, options={'id': post_id, 'message': new_msg})
 
 
 def static_path(filename: str) -> str:
