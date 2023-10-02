@@ -1,5 +1,5 @@
 from httpx import HTTPError
-import pytest, os
+import pytest
 from jinja2 import Environment, PackageLoader, select_autoescape
 from wsgi import create_app, settings
 from wsgi.my_bot import get_user_by_username, create_user, create_token

@@ -3,7 +3,7 @@ from datetime import timedelta, date
 from mattermostautodriver import Driver
 
 from tests.conftest import env, test_project_rm, test_mm_user1, test_rm_user1
-from wsgi import bot, handlers
+from wsgi.my_bot import bot, create_direct_channel
 from wsgi.redmine_api import delete_issue
 from wsgi.settings import envs
 
@@ -75,7 +75,7 @@ def block_3(msg: str, secs: int):
     mm_client1.login()
 
     context = {'bot_user_id': bot.client.userid, 'acting_user': {'id': test_mm_user1['id']}}
-    channel_id = handlers.create_direct_channel(context)
+    channel_id = create_direct_channel(context)
 
     created_post = mm_client1.posts.create_post({'channel_id': channel_id, 'message': msg})
     time.sleep(secs)

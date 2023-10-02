@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from jinja2 import Environment, PackageLoader, select_autoescape
 from redminelib import Redmine
 
-from converters import choose_name, create_full_name
+from ext_funcs import choose_name, create_full_name
 from tests.blocks_code import blocks
 from tests.conftest import (
     test_mm_user1, test_mm_user2, test_project_rm, test_rm_user1, test_rm_user2, test_memberships1, test_memberships2

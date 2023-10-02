@@ -31,6 +31,14 @@ def get_user_by_username(username: str):
     return bot.users.get_user_by_username(username)
 
 
+def create_direct_channel(context: dict):
+    bot_user_id = context['bot_user_id']
+    user_id = context['acting_user']['id']
+    data = [bot_user_id, user_id]
+    response_dict = bot.channels.create_direct_channel(options=data)
+    channel_id = response_dict['id']
+    return channel_id
+
 if envs.mm_app_token:
     bot = Driver({
         'scheme': envs.MM_SCHEMA,
