@@ -1,6 +1,7 @@
-Flask==2.3.3
+Flask==3.0.0
 python-dotenv==1.0.0
 python-redmine==2.4.0
 mattermostautodriver==1.3.0
 gunicorn==21.2.0
 pytest==7.4.2
+coverage==7.3.2

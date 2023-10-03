@@ -752,6 +752,7 @@ class TestEventHandler:
             new_post = blocks.block_3(temp.format(issue.id), 2)
 
         assert f'{envs.redmine_url_external}/issues/{issue.id}' in new_post['message']
+        issue.delete()
 
     @pytest.mark.parametrize('temp', (
             '#t{}',
@@ -765,11 +766,12 @@ class TestEventHandler:
 
             os.environ.pop(test_mm_user1['username'])
 
-            new_post = blocks.block_3(temp.format(issue.id), 0)
+            new_post = blocks.block_3(temp.format(issue.id), 2)
 
             os.environ[test_mm_user1['username']] = test_rm_user1.login
 
         assert new_post['message'] == temp.format(issue.id)
+        issue.delete()
 
     @pytest.mark.parametrize('temp', (
             '#t{}',
@@ -785,7 +787,7 @@ class TestEventHandler:
 
             delete_redmine_user(test_rm_user1.id)
 
-            new_post = blocks.block_3(temp.format(issue.id), 0)
+            new_post = blocks.block_3(temp.format(issue.id), 2)
 
             test_rm_user1 = create_redmine_user(
                 login=envs.test_rm_username1,
@@ -800,3 +802,26 @@ class TestEventHandler:
                                                            role_ids=[first_role.id])
 
         assert new_post['message'] == temp.format(issue.id)
+        issue.delete()
+
+    @pytest.mark.parametrize('temp', (
+            '#t{}',
+            '  asdasd      #t{}    asda asdasd',
+    ))
+    def test_no_access_task(self, app, temp):
+        with app.app_context():
+            global test_memberships1
+            with Redmine(envs.redmine_url_external, key=envs.rm_admin_key).session() as redmine:
+                issue = redmine.issue.create(project_id=test_project_rm.id, subject='subject...', is_private=True)
+
+            test_memberships1.delete()
+
+            new_post = blocks.block_3(temp.format(issue.id), 2)
+
+            first_role = all_roles()[0]
+            test_memberships1 = create_project_memberships(project_id='testing', user_id=test_rm_user1.id,
+                                                           role_ids=[first_role.id])
+
+        assert new_post['message'] == temp.format(issue.id)
+        issue.delete()
+

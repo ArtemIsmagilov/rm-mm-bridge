@@ -102,6 +102,9 @@
   > **Permissions**<br>
   > _Must have create_post_ephemeral permission **(currently only given to system admin)**_
   
++ Внимание, если маттермост не видит запущенное приложение, то необходимо
+  - или в настройках администратора добавить возможность загрузки по хосту `127.0.0.1`(по умолчанию не разрешено)
+  - или в файле `.env` изменить `EXTERNAL` хосты на `0.0.0.0`(для запуска через `flask run -h 0.0.0.0` или `gunicorn`)
 
 ## Тестирование приложения
 
@@ -244,7 +247,7 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
 ## Автотесты
 
 - мы тестируем только клиентскую часть
-- предварительно необходимо запустить докер контейнеры
+- предварительно необходимо запустить докер контейнеры redmine и mattermost
 - создайте файл `.test.env` и добавьте необходимые переменные для тестирования
   Пример
   ```text
@@ -312,28 +315,27 @@ https://developers.mattermost.com/integrate/apps/quickstart/quick-start-python/
   ```
   
   ```bash
-    coverage report 
+  coverage report 
   ```  
 
   ```text
   Name                          Stmts   Miss  Cover
   -------------------------------------------------
-  converters.py                     9      0   100%
+  ext_funcs.py                      9      0   100%
   tests/__init__.py                 0      0   100%
   tests/blocks_code/blocks.py      30      0   100%
   tests/conftest.py                37      3    92%
-  tests/test_app.py               292      0   100%
-  wsgi/__init__.py                187      9    95%
+  tests/test_app.py               306      0   100%
+  wsgi/__init__.py                401     31    92%
   wsgi/client_errors.py             6      0   100%
   wsgi/constants.py                 2      0   100%
   wsgi/decorators.py               29      3    90%
-  wsgi/handlers.py                225     27    88%
-  wsgi/my_bot.py                   20      2    90%
+  wsgi/my_bot.py                   27      2    93%
   wsgi/redmine_api.py              48      0   100%
-  wsgi/settings.py                 59      2    97%
+  wsgi/settings.py                 60      2    97%
   wsgi/views.py                    26      2    92%
   -------------------------------------------------
-  TOTAL                           970     48    95%
+  TOTAL                           981     43    96%
   ```
 
 
