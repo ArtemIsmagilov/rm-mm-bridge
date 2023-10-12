@@ -2,7 +2,7 @@ from httpx import HTTPError
 import pytest
 from jinja2 import Environment, PackageLoader, select_autoescape
 from wsgi import create_app, settings
-from wsgi.my_bot import get_user_by_username, create_user, create_token
+from wsgi import my_bot
 from wsgi.redmine_api import (
     create_redmine_user, create_redmine_project, create_project_memberships, all_roles, delete_redmine_project,
     delete_redmine_user_by_username
@@ -13,9 +13,9 @@ settings.envs = settings.Testing()
 env = Environment(loader=PackageLoader("tests"), autoescape=select_autoescape())
 
 # create mattermost test user, if it doesn't exist
-test_mm_user1 = get_user_by_username(username=settings.envs.test_mm_username1)
+test_mm_user1 = my_bot.get_user_by_username(username=settings.envs.test_mm_username1)
 if isinstance(test_mm_user1, HTTPError):
-    test_mm_user1 = create_user({
+    test_mm_user1 = my_bot.create_user({
         'email': settings.envs.test_mm_email1,
         'username': settings.envs.test_mm_username1,
         'password': settings.envs.test_mm_password1,
@@ -23,12 +23,12 @@ if isinstance(test_mm_user1, HTTPError):
         'last_name': settings.envs.test_mm_last_name1,
     })
 
-rest_token1 = create_token(test_mm_user1['id'], {"description": "testuser1 token"})
+rest_token1 = my_bot.create_token(test_mm_user1['id'], {"description": "testuser1 token"})
 settings.envs.test_mm_token1 = rest_token1['token']
 
-test_mm_user2 = get_user_by_username(username=settings.envs.test_mm_username2)
+test_mm_user2 = my_bot.get_user_by_username(username=settings.envs.test_mm_username2)
 if isinstance(test_mm_user2, HTTPError):
-    test_mm_user2 = create_user({
+    test_mm_user2 = my_bot.create_user({
         'email': settings.envs.test_mm_email2,
         'username': settings.envs.test_mm_username2,
         'password': settings.envs.test_mm_password2,
@@ -36,7 +36,7 @@ if isinstance(test_mm_user2, HTTPError):
         'last_name': settings.envs.test_mm_last_name2,
     })
 
-rest_token2 = create_token(test_mm_user2['id'], {"description": "testuser2 token"})
+rest_token2 = my_bot.create_token(test_mm_user2['id'], {"description": "testuser2 token"})
 settings.envs.test_mm_token2 = rest_token2['token']
 
 # create redmine test user, if it doesn't exist

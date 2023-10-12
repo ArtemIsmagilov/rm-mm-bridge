@@ -353,7 +353,7 @@ def create_app(test_config=None):
             'bindings': {
                 'path': '/bindings',
             },
-            'requested_locations': ['/command'],
+            'requested_locations': ['/command', '/channel_header'],
             "http": {
                 "root_url": envs.app_url_external,
             },
@@ -428,7 +428,31 @@ def create_app(test_config=None):
                 }
                     ,
                 ]
-            }
+            },
+                # {
+                #     'location': '/channel_header',
+                #     'bindings': [
+                #         {
+                #             'location': 'send-button',
+                #             'icon': static_path('telemost.png'),
+                #             'label': 'send hello message',
+                #             'form': {'title': 'I am a form!',
+                #                      'icon': 'icon.png',
+                #                      'fields': [
+                #                          {
+                #                              'type': 'text',
+                #                              'name': 'message',
+                #                              'label': 'message',
+                #                              'position': 1,
+                #                          }
+                #                      ],
+                #                      'submit': {
+                #                          'path': '/submit',
+                #                      },
+                #                      }
+                #         },
+                #     ],
+                # },
             ]
         }
 

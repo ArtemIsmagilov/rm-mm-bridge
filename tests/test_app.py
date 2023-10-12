@@ -3,6 +3,7 @@ from datetime import date, timedelta
 from jinja2 import Environment, PackageLoader, select_autoescape
 from redminelib import Redmine
 
+import wsgi
 from ext_funcs import choose_name, create_full_name
 from tests.blocks_code import blocks
 from tests.conftest import (
@@ -86,12 +87,24 @@ class TestNewTasksSubmit:
         response = blocks.block_1(self.endpoint, client, template)
         assert response.json['type'] == 'ok'
 
+    @pytest.mark.parametrize('template', (
+            'new_tasks_submit_msg1.txt',
+    ))
+    def test_no_rm_key(self, client, template):
+        rm_admin_key = envs.rm_admin_key
+        envs.rm_admin_key = None
+
+        response = blocks.block_1(self.endpoint, client, template)
+
+        envs.rm_admin_key = rm_admin_key
+
+        assert response.json == views.no_rm_access_token()
+
     @pytest.mark.parametrize('login_mm', (
             envs.test_mm_username1,
             envs.test_mm_username2,
     ))
     def test_unregister_account(self, client, login_mm):
-        # UNREGISTERED USER
         os.environ.pop(login_mm)
 
         response = blocks.block_1(self.endpoint, client, 'new_tasks_submit_msg1.txt')
@@ -101,7 +114,6 @@ class TestNewTasksSubmit:
         assert response.json == views.unregister_mm_account(login_mm)
 
     def test_no_rm_user(self, client):
-        # NO REDMINE USER
         global test_rm_user1, test_memberships1
 
         delete_redmine_user(test_rm_user1.id)
@@ -122,11 +134,27 @@ class TestNewTasksSubmit:
 
         assert response.json == views.deactivate_or_not_exist_rm_account(test_rm_user1.login)
 
+    def test_no_access_project(self, client):
+        global test_memberships1
+
+        test_memberships1.delete()
+        response = blocks.block_1(self.endpoint, client, 'new_tasks_submit_msg1.txt')
+        first_role = all_roles()[0]
+        test_memberships1 = create_project_memberships(project_id='testing', user_id=test_rm_user1.id,
+                                                       role_ids=[first_role.id])
+        assert response.json == views.no_access_project(test_rm_user1.login, test_project_rm.identifier)
+
+    @pytest.mark.parametrize('un_identifier', (
+            'sadasdasdasdaasd',
+    ))
+    def test_no_rm_project(self, client, un_identifier):
+        response = blocks.block_1(self.endpoint, client, 'new_tasks_submit_msg1.txt', proj_iden=un_identifier)
+        assert response.json == views.no_rm_project(test_rm_user1.login, un_identifier)
+
     @pytest.mark.parametrize('username', (
             'anonymous',
     ))
     def test_no_rm_user_in_subject(self, client, username):
-        # NO REDMINE USER
         os.environ[username] = username
         response = blocks.block_1(self.endpoint, client, 'new_tasks_submit_msg1.txt', username)
         os.environ.pop(username)
@@ -148,28 +176,18 @@ class TestNewTasksSubmit:
         assert response.json == views.invalid_format_date()
 
     @pytest.mark.parametrize('template', (
-            'new_tasks_submit_msg7.txt',  # START DATE > END DATE
+            'new_tasks_submit_msg7.txt',
     ))
     def test_error_date_greater(self, client, template):
         response = blocks.block_1(self.endpoint, client, template)
         assert response.json == views.start_date_greater()
 
     @pytest.mark.parametrize('template', (
-            'new_tasks_submit_msg8.txt',  # LARGE SUBJECT
+            'new_tasks_submit_msg8.txt',
     ))
     def test_error_large_task(self, client, template):
         response = blocks.block_1(self.endpoint, client, template)
         assert response.json == views.long_subject()
-
-    def test_no_access_project(self, client):
-        global test_memberships1
-
-        test_memberships1.delete()
-        response = blocks.block_1(self.endpoint, client, 'new_tasks_submit_msg1.txt')
-        first_role = all_roles()[0]
-        test_memberships1 = create_project_memberships(project_id='testing', user_id=test_rm_user1.id,
-                                                       role_ids=[first_role.id])
-        assert response.json == views.no_access_project(test_rm_user1.login, test_project_rm.identifier)
 
 
 class TestNewTaskSubmit:
@@ -177,83 +195,109 @@ class TestNewTaskSubmit:
 
     @pytest.mark.parametrize(
         'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
-            (test_project_rm,
-             all_trackers()[0],
-             'text...',
-             'many text...',
-             all_issue_statuses()[0],
-             all_priorities()[0],
-             date.today().strftime('%d.%m.%Y'),
-             (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
-             1,
-             OPTIONS_DONE_FOR_FORM[0],
-             None,
-             ),
+            (
+                    test_project_rm,
+                    all_trackers()[0],
+                    'text...',
+                    'many text...',
+                    all_issue_statuses()[0],
+                    all_priorities()[0],
+                    date.today().strftime('%d.%m.%Y'),
+                    (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
+                    1,
+                    OPTIONS_DONE_FOR_FORM[0],
+                    None,
+            ),
         ])
     def test_success(self, client, project, tracker, subject, description, status, priority, start_date, end_date,
                      estimated_time, done, assignee):
-        response = blocks.block_2(
-            self.endpoint, client, project, tracker, subject, description, status, priority, start_date, end_date,
-            estimated_time,
-            done, assignee
-        )
+        response = blocks.block_2(self.endpoint, client, project, tracker, subject, description, status, priority,
+                                  start_date, end_date, estimated_time, done, assignee
+                                  )
 
         assert response.json['type'] == 'ok'
 
     @pytest.mark.parametrize(
         'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
-            (test_project_rm,
-             all_trackers()[0],
-             'text...',
-             'many text...',
-             all_issue_statuses()[0],
-             all_priorities()[0],
-             date.today().strftime('%d.%m.%Y'),
-             (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
-             1,
-             OPTIONS_DONE_FOR_FORM[0],
-             {'label': test_mm_user2['username'], 'value': test_mm_user2['id']},
-             )
+            (
+                    test_project_rm,
+                    all_trackers()[0],
+                    'text...',
+                    'many text...',
+                    all_issue_statuses()[0],
+                    all_priorities()[0],
+                    date.today().strftime('%d.%m.%Y'),
+                    (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
+                    1,
+                    OPTIONS_DONE_FOR_FORM[0],
+                    None,
+            ),
+        ])
+    def test_no_rm_key(self, client, project, tracker, subject, description, status, priority, start_date, end_date,
+                       estimated_time, done, assignee):
+        rm_admin_key = envs.rm_admin_key
+        envs.rm_admin_key = None
+
+        response = blocks.block_2(self.endpoint, client, project, tracker, subject, description, status, priority,
+                                  start_date, end_date, estimated_time, done, assignee
+                                  )
+
+        envs.rm_admin_key = rm_admin_key
+
+        assert response.json == views.no_rm_access_token()
+
+    @pytest.mark.parametrize(
+        'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
+            (
+                    test_project_rm,
+                    all_trackers()[0],
+                    'text...',
+                    'many text...',
+                    all_issue_statuses()[0],
+                    all_priorities()[0],
+                    date.today().strftime('%d.%m.%Y'),
+                    (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
+                    1,
+                    OPTIONS_DONE_FOR_FORM[0],
+                    {'label': test_mm_user2['username'], 'value': test_mm_user2['id']},
+            ),
         ])
     def test_unregister_account(self, client, project, tracker, subject, description, status, priority, start_date,
                                 end_date, estimated_time, done, assignee):
         # UNREGISTERED USER
         os.environ.pop(test_mm_user1['username'])
-        response = blocks.block_2(
-            self.endpoint, client, project, tracker, subject, description, status, priority, start_date, end_date,
-            estimated_time,
-            done, assignee
-        )
+
+        response = blocks.block_2(self.endpoint, client, project, tracker, subject, description, status, priority,
+                                  start_date, end_date, estimated_time, done, assignee
+                                  )
         os.environ[test_mm_user1['username']] = test_rm_user1.login
         assert response.json == views.unregister_mm_account(test_mm_user1['username'])
 
     @pytest.mark.parametrize(
         'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
-            (test_project_rm,
-             all_trackers()[0],
-             'text...',
-             'many text...',
-             all_issue_statuses()[0],
-             all_priorities()[0],
-             date.today().strftime('%d.%m.%Y'),
-             (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
-             1,
-             OPTIONS_DONE_FOR_FORM[0],
-             {'label': test_mm_user2['username'], 'value': test_mm_user2['id']},
-             )
+            (
+                    test_project_rm,
+                    all_trackers()[0],
+                    'text...',
+                    'many text...',
+                    all_issue_statuses()[0],
+                    all_priorities()[0],
+                    date.today().strftime('%d.%m.%Y'),
+                    (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
+                    1,
+                    OPTIONS_DONE_FOR_FORM[0],
+                    {'label': test_mm_user2['username'], 'value': test_mm_user2['id']},
+            ),
         ])
     def test_no_rm_user(self, client, project, tracker, subject, description, status, priority, start_date, end_date,
                         estimated_time, done, assignee):
-        # NO REDMINE USER
         global test_rm_user1, test_memberships1
-
+        #  HAVEN'T REDMINE ACCOUNT
         delete_redmine_user(test_rm_user1.id)
 
-        response = blocks.block_2(
-            self.endpoint, client, project, tracker, subject, description, status, priority, start_date, end_date,
-            estimated_time,
-            done, assignee
-        )
+        response = blocks.block_2(self.endpoint, client, project, tracker, subject, description, status, priority,
+                                  start_date, end_date, estimated_time, done, assignee
+                                  )
 
         test_rm_user1 = create_redmine_user(
             login=envs.test_rm_username1,
@@ -271,142 +315,19 @@ class TestNewTaskSubmit:
 
     @pytest.mark.parametrize(
         'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
-            (test_project_rm,
-             all_trackers()[0],
-             '?' * 500,  # INVALID DATA
-             'many text...',
-             all_issue_statuses()[0],
-             all_priorities()[0],
-             date.today().strftime('%d.%m.%Y'),
-             (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
-             1,
-             OPTIONS_DONE_FOR_FORM[0],
-             None,
-             )
-        ]
-    )
-    def test_long_subject(self, client, project, tracker, subject, description, status, priority, start_date, end_date,
-                          estimated_time, done, assignee):
-        response = blocks.block_2(
-            self.endpoint, client, project, tracker, subject, description, status, priority, start_date, end_date,
-            estimated_time,
-            done, assignee
-        )
-
-        assert response.json == views.long_subject()
-
-    @pytest.mark.parametrize(
-        'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
-            (test_project_rm,
-             all_trackers()[0],
-             'text...',
-             'many text...',
-             all_issue_statuses()[0],
-             all_priorities()[0],
-             date.today().strftime('%d.%m.%Y'),
-             (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
-             1,
-             OPTIONS_DONE_FOR_FORM[0],
-             {'label': test_mm_user2['username'], 'value': test_mm_user2['id']},
-             )
-        ])
-    def test_unregister_assignee(self, client, project, tracker, subject, description, status, priority, start_date,
-                                 end_date, estimated_time, done, assignee):
-        # UNREGISTERED ASSIGNEE USER
-        os.environ.pop(test_mm_user2['username'])
-        response = blocks.block_2(
-            self.endpoint, client, project, tracker, subject, description, status, priority, start_date, end_date,
-            estimated_time,
-            done, assignee
-        )
-        os.environ[test_mm_user2['username']] = test_rm_user2.login
-        assert response.json == views.unregister_mm_account(test_mm_user2['username'])
-
-    @pytest.mark.parametrize(
-        'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
-            (test_project_rm,
-             all_trackers()[0],
-             'text...',
-             'many text...',
-             all_issue_statuses()[0],
-             all_priorities()[0],
-             '721878.1290.1290',  # INVALID DATA
-             (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
-             1,
-             OPTIONS_DONE_FOR_FORM[0],
-             {'label': test_mm_user2['username'], 'value': test_mm_user2['id']},
-             )
-        ])
-    def test_invalid_start_date(self, client, project, tracker, subject, description, status, priority, start_date,
-                                end_date, estimated_time, done, assignee):
-        response = blocks.block_2(
-            self.endpoint, client, project, tracker, subject, description, status, priority, start_date, end_date,
-            estimated_time, done, assignee
-        )
-        assert response.json == views.invalid_format_date()
-
-    @pytest.mark.parametrize(
-        'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
-            (test_project_rm,
-             all_trackers()[0],
-             'text...',
-             'many text...',
-             all_issue_statuses()[0],
-             all_priorities()[0],
-             date.today().strftime('%d.%m.%Y'),
-             '12.21.202',
-             1,
-             OPTIONS_DONE_FOR_FORM[0],
-             None,
-             ),
-        ])
-    def test_invalid_end_date(self, client, project, tracker, subject, description, status, priority, start_date,
-                              end_date, estimated_time, done, assignee):
-        response = blocks.block_2(
-            self.endpoint, client, project, tracker, subject, description, status, priority, start_date, end_date,
-            estimated_time, done, assignee
-        )
-
-        assert response.json == views.invalid_format_date()
-
-    @pytest.mark.parametrize(
-        'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
-            (test_project_rm,
-             all_trackers()[0],
-             'text...',
-             'many text...',
-             all_issue_statuses()[0],
-             all_priorities()[0],
-             date.today().strftime('%d.%m.%Y'),
-             (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
-             'estimated_time',  # INVALID DATE
-             OPTIONS_DONE_FOR_FORM[0],
-             None,
-             ),
-        ])
-    def test_invalid_estimated_time(self, client, project, tracker, subject, description, status, priority, start_date,
-                                    end_date, estimated_time, done, assignee):
-        response = blocks.block_2(
-            self.endpoint, client, project, tracker, subject, description, status, priority, start_date, end_date,
-            estimated_time, done, assignee
-        )
-
-        assert response.json == views.invalid_estimated_time(estimated_time)
-
-    @pytest.mark.parametrize(
-        'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
-            (test_project_rm,
-             all_trackers()[0],
-             'text...',
-             'many text...',
-             all_issue_statuses()[0],
-             all_priorities()[0],
-             date.today().strftime('%d.%m.%Y'),
-             (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
-             1,  # INVALID DATE
-             OPTIONS_DONE_FOR_FORM[0],
-             None,
-             ),
+            (
+                    test_project_rm,
+                    all_trackers()[0],
+                    'text...',
+                    'many text...',
+                    all_issue_statuses()[0],
+                    all_priorities()[0],
+                    date.today().strftime('%d.%m.%Y'),
+                    (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
+                    1,
+                    OPTIONS_DONE_FOR_FORM[0],
+                    None,
+            ),
         ])
     def test_no_access_project(self, client, project, tracker, subject, description, status, priority, start_date,
                                end_date, estimated_time, done, assignee):
@@ -414,17 +335,234 @@ class TestNewTaskSubmit:
 
         test_memberships1.delete()
 
-        response = blocks.block_2(
-            self.endpoint, client, project, tracker, subject, description, status, priority, start_date, end_date,
-            estimated_time,
-            done, assignee
-        )
+        response = blocks.block_2(self.endpoint, client, project, tracker, subject, description, status, priority,
+                                  start_date, end_date, estimated_time, done, assignee)
 
         first_role = all_roles()[0]
         test_memberships1 = create_project_memberships(project_id='testing', user_id=test_rm_user1.id,
                                                        role_ids=[first_role.id])
 
-        assert response.json['type'] == 'error'
+        assert response.json == views.no_access_project(test_rm_user1.login, project.identifier)
+
+    @pytest.mark.parametrize(
+        'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
+            (
+                    test_project_rm,
+                    all_trackers()[0],
+                    'text...',
+                    'many text...',
+                    all_issue_statuses()[0],
+                    all_priorities()[0],
+                    date.today().strftime('%d.%m.%Y'),
+                    (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
+                    1,
+                    OPTIONS_DONE_FOR_FORM[0],
+                    {'label': test_mm_user2['username'], 'value': test_mm_user2['id']},
+            ),
+        ])
+    def test_unregister_assignee(self, client, project, tracker, subject, description, status, priority, start_date,
+                                 end_date, estimated_time, done, assignee):
+        # UNREGISTER ASSIGNEE ACCOUNT IN ENV
+        os.environ.pop(test_mm_user2['username'])
+
+        response = blocks.block_2(self.endpoint, client, project, tracker, subject, description, status, priority,
+                                  start_date, end_date, estimated_time, done, assignee
+                                  )
+        os.environ[test_mm_user2['username']] = test_rm_user2.login
+        assert response.json == views.unregister_mm_account(test_mm_user2['username'])
+
+    @pytest.mark.parametrize(
+        'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
+            (
+                    test_project_rm,
+                    all_trackers()[0],
+                    'text...',
+                    'many text...',
+                    all_issue_statuses()[0],
+                    all_priorities()[0],
+                    date.today().strftime('%d.%m.%Y'),
+                    (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
+                    1,
+                    OPTIONS_DONE_FOR_FORM[0],
+                    {'label': test_mm_user2['username'], 'value': test_mm_user2['id']},  # assignee user2
+            )
+        ])
+    def test_no_rm_assignee_user(self, client, project, tracker, subject, description, status, priority, start_date,
+                                 end_date, estimated_time, done, assignee):
+        global test_rm_user2, test_memberships2
+        # NO ASSIGNEE ACCOUNT IN REDMINE
+        delete_redmine_user(test_rm_user2.id)
+
+        response = blocks.block_2(self.endpoint, client, project, tracker, subject, description, status, priority,
+                                  start_date, end_date, estimated_time, done, assignee
+                                  )
+
+        test_rm_user2 = create_redmine_user(
+            login=envs.test_rm_username2,
+            password=envs.test_rm_password2,
+            firstname=envs.test_rm_first_name2,
+            lastname=envs.test_rm_last_name2,
+            mail=envs.test_rm_email2,
+        )
+
+        first_role = all_roles()[0]
+        test_memberships2 = create_project_memberships(project_id='testing', user_id=test_rm_user2.id,
+                                                       role_ids=[first_role.id])
+
+        assert response.json == views.deactivate_or_not_exist_rm_account(test_rm_user2.login)
+
+    @pytest.mark.parametrize(
+        'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
+            (
+                    test_project_rm,
+                    all_trackers()[0],
+                    'text...',
+                    None,
+                    all_issue_statuses()[0],
+                    all_priorities()[0],
+                    date.today().strftime('%d.%m.%Y'),
+                    None,
+                    None,
+                    OPTIONS_DONE_FOR_FORM[0],
+                    {'label': test_mm_user2['username'], 'value': test_mm_user2['id']},
+            ),
+        ])
+    def test_no_access_project_for_assignee(self, client, project, tracker, subject, description, status, priority,
+                                            start_date, end_date, estimated_time, done, assignee):
+        global test_memberships2
+        # HAVEN'T ACCESS TO PROJECT FOR ASSIGNEE REDMINE USER
+        test_memberships2.delete()
+
+        response = blocks.block_2(self.endpoint, client, project, tracker, subject, description, status, priority,
+                                  start_date, end_date, estimated_time, done, assignee
+                                  )
+
+        first_role = all_roles()[0]
+        test_memberships2 = create_project_memberships(project_id='testing', user_id=test_rm_user2.id,
+                                                       role_ids=[first_role.id])
+
+        assert response.json == views.no_access_project(test_rm_user2.login, project.identifier)
+
+    @pytest.mark.parametrize(
+        'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
+            (
+                    test_project_rm,
+                    all_trackers()[0],
+                    '?' * 500,  # INVALID DESCRIPTION DATA
+                    'many text...',
+                    all_issue_statuses()[0],
+                    all_priorities()[0],
+                    date.today().strftime('%d.%m.%Y'),
+                    (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
+                    None,
+                    OPTIONS_DONE_FOR_FORM[0],
+                    None,
+            ),
+        ]
+    )
+    def test_long_subject(self, client, project, tracker, subject, description, status, priority, start_date, end_date,
+                          estimated_time, done, assignee):
+        response = blocks.block_2(self.endpoint, client, project, tracker, subject, description, status, priority,
+                                  start_date, end_date, estimated_time, done, assignee
+                                  )
+
+        assert response.json == views.long_subject()
+
+    @pytest.mark.parametrize(
+        'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
+            (
+                    test_project_rm,
+                    all_trackers()[0],
+                    'text...',
+                    'many text...',
+                    all_issue_statuses()[0],
+                    all_priorities()[0],
+                    '721878.1290.1290',  # INVALID START DATA
+                    (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
+                    1,
+                    OPTIONS_DONE_FOR_FORM[0],
+                    {'label': test_mm_user2['username'], 'value': test_mm_user2['id']},
+            )
+        ])
+    def test_invalid_start_date(self, client, project, tracker, subject, description, status, priority, start_date,
+                                end_date, estimated_time, done, assignee):
+        response = blocks.block_2(self.endpoint, client, project, tracker, subject, description, status, priority,
+                                  start_date, end_date, estimated_time, done, assignee
+                                  )
+        assert response.json == views.invalid_format_date()
+
+    @pytest.mark.parametrize(
+        'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
+            (
+                    test_project_rm,
+                    all_trackers()[0],
+                    'text...',
+                    'many text...',
+                    all_issue_statuses()[0],
+                    all_priorities()[0],
+                    date.today().strftime('%d.%m.%Y'),
+                    '12.21.202',  # INVALID END DATA
+                    1,
+                    OPTIONS_DONE_FOR_FORM[0],
+                    None,
+            ),
+        ])
+    def test_invalid_end_date(self, client, project, tracker, subject, description, status, priority, start_date,
+                              end_date, estimated_time, done, assignee):
+        response = blocks.block_2(self.endpoint, client, project, tracker, subject, description, status, priority,
+                                  start_date, end_date, estimated_time, done, assignee
+                                  )
+
+        assert response.json == views.invalid_format_date()
+
+    @pytest.mark.parametrize(
+        'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
+            (
+                    test_project_rm,
+                    all_trackers()[0],
+                    'text...',
+                    'many text...',
+                    all_issue_statuses()[0],
+                    all_priorities()[0],
+                    (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
+                    date.today().strftime('%d.%m.%Y'),
+                    None,
+                    OPTIONS_DONE_FOR_FORM[0],
+                    None,
+            ),
+        ])
+    def test_startdate_gt_enddate(self, client, project, tracker, subject, description, status, priority, start_date,
+                                  end_date, estimated_time, done, assignee):
+        response = blocks.block_2(
+            self.endpoint, client, project, tracker, subject, description, status, priority, start_date, end_date,
+            estimated_time, done, assignee
+        )
+
+        assert response.json == views.start_date_greater()
+
+    @pytest.mark.parametrize(
+        'project,tracker,subject,description,status,priority,start_date,end_date,estimated_time,done,assignee', [
+            (
+                    test_project_rm,
+                    all_trackers()[0],
+                    'text...',
+                    'many text...',
+                    all_issue_statuses()[0],
+                    all_priorities()[0],
+                    date.today().strftime('%d.%m.%Y'),
+                    (date.today() + timedelta(days=1)).strftime('%d.%m.%Y'),
+                    'estimated_time',  # INVALID ESTIMATED TIME
+                    OPTIONS_DONE_FOR_FORM[0],
+                    None,
+            ),
+        ])
+    def test_invalid_estimated_time(self, client, project, tracker, subject, description, status, priority, start_date,
+                                    end_date, estimated_time, done, assignee):
+        response = blocks.block_2(
+            self.endpoint, client, project, tracker, subject, description, status, priority, start_date, end_date,
+            estimated_time, done, assignee
+        )
+        assert response.json == views.invalid_estimated_time(estimated_time)
 
 
 class TestNewTasks:
@@ -437,6 +575,20 @@ class TestNewTasks:
 
         response = client.post(self.endpoint, json=data)
         assert response.json['type'] == 'form'
+
+    def test_no_rm_key(self, client):
+        rm_admin_key = envs.rm_admin_key
+        envs.rm_admin_key = None
+
+        data = {'context': {'acting_user': {'id': test_mm_user1['id'], 'username': test_mm_user1['username'],
+                                            'first_name': test_mm_user1['first_name'],
+                                            'last_name': test_mm_user1['last_name']}}}
+
+        response = client.post(self.endpoint, json=data)
+
+        envs.rm_admin_key = rm_admin_key
+
+        assert response.json == views.no_rm_access_token()
 
     def test_unregister_account(self, client):
         data = {'context': {'acting_user': {'id': test_mm_user1['id'], 'username': test_mm_user1['username'],
@@ -503,6 +655,20 @@ class TestNewTask:
         response = client.post(self.endpoint, json=data)
 
         response.json['type'] = 'form'
+
+    def test_no_rm_key(self, client):
+        rm_admin_key = envs.rm_admin_key
+        envs.rm_admin_key = None
+
+        data = {'context': {'acting_user': {'id': test_mm_user1['id'], 'username': test_mm_user1['username'],
+                                            'first_name': test_mm_user1['first_name'],
+                                            'last_name': test_mm_user1['last_name']}}}
+
+        response = client.post(self.endpoint, json=data)
+
+        envs.rm_admin_key = rm_admin_key
+
+        assert response.json == views.no_rm_access_token()
 
     def test_unregister_account(self, client):
         data = {'context': {'acting_user': {'id': test_mm_user1['id'], 'username': test_mm_user1['username'],
@@ -571,7 +737,8 @@ class TestTasksForMe:
                                             'last_name': mm_user['last_name']}}}
 
         with Redmine(envs.redmine_url_external, key=envs.rm_admin_key).session() as redmine:
-            [i.delete() for i in redmine.issue.all()]
+            for i in redmine.issue.all():
+                i.delete()
 
         response = client.post(self.endpoint, json=data)
 
@@ -622,6 +789,20 @@ class TestTasksForMe:
             issue.delete()
 
         assert response.json['type'] == 'ok'
+
+    def test_no_rm_key(self, client):
+        rm_admin_key = envs.rm_admin_key
+        envs.rm_admin_key = None
+
+        data = {'context': {'acting_user': {'id': test_mm_user1['id'], 'username': test_mm_user1['username'],
+                                            'first_name': test_mm_user1['first_name'],
+                                            'last_name': test_mm_user1['last_name']}}}
+
+        response = client.post(self.endpoint, json=data)
+
+        envs.rm_admin_key = rm_admin_key
+
+        assert response.json == views.no_rm_access_token()
 
     def test_unregister_account(self, client):
         data = {'context': {'acting_user': {'id': test_mm_user1['id'], 'username': test_mm_user1['username'],
@@ -697,8 +878,26 @@ class TestTasksByMe:
             response = client.post(self.endpoint, json=data)
 
             issue.delete()
-
+        print(response.json)
         assert response.json['type'] == 'ok'
+
+    @pytest.mark.parametrize('rm_user, mm_user', (
+            (test_rm_user1, test_mm_user1),
+            (test_rm_user2, test_mm_user2),
+    ))
+    def test_no_rm_key(self, client, rm_user, mm_user):
+        rm_admin_key = envs.rm_admin_key
+        envs.rm_admin_key = None
+
+        data = {'context': {'acting_user': {'id': mm_user['id'], 'username': mm_user['username'],
+                                            'first_name': mm_user['first_name'],
+                                            'last_name': mm_user['last_name']}}}
+
+        response = client.post(self.endpoint, json=data)
+
+        envs.rm_admin_key = rm_admin_key
+
+        assert response.json == views.no_rm_access_token()
 
     def test_unregister_account(self, client):
         data = {'context': {'acting_user': {'id': test_mm_user1['id'], 'username': test_mm_user1['username'],
@@ -825,3 +1024,32 @@ class TestEventHandler:
         assert new_post['message'] == temp.format(issue.id)
         issue.delete()
 
+    @pytest.mark.parametrize('temp', (
+            'some text',
+            '  asdasd      #not correct ticket   asda asdasd',
+    ))
+    def test_no_task_with_id(self, app, temp):
+        with app.app_context():
+            new_post = blocks.block_3(temp, 2)
+
+        assert temp == new_post['message']
+
+    @pytest.mark.parametrize('temp,task_id', (
+            ('#t{}', '99999999999999999999999999'),
+            ('  asdasd      #t{}    asda asdasd', '99999999999999999999999999')
+    ))
+    def test_not_correct_pattern_or_other_msg(self, app, temp, task_id):
+        with app.app_context():
+            new_post = blocks.block_3(temp.format(task_id), 2)
+
+        assert temp.format(task_id) == new_post['message']
+
+
+class TestOther:
+    def test_manifest(self, client):
+        response = client.get('/manifest.json')
+        assert response.status_code == 200
+
+    def test_correct_get_static(self, client):
+        response = client.post('/bindings')
+        assert response.json['data'][0]['bindings'][0]['icon'] == '{}/static/{}'.format(envs.app_url_external, 'redmine.png')

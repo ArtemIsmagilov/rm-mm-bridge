@@ -2,7 +2,9 @@
 .test.env
 example_response.py
 
-venv
+venv/
+venv-py311/
+venv-py312/
 docker/
 mm-logs
 storage

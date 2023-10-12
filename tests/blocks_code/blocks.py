@@ -8,7 +8,12 @@ from wsgi.redmine_api import delete_issue
 from wsgi.settings import envs
 
 
-def block_1(url, client, template, username1=envs.test_mm_username1, username2=envs.test_mm_username2):
+class TestProject:
+    def __init__(self, **kwargs):
+        for attr, val in kwargs.items(): self.__setattr__(attr, val)
+
+
+def block_1(url, client, template, username1=envs.test_mm_username1, username2=envs.test_mm_username2, proj_iden=test_project_rm.identifier):
     tm = env.get_template(template)
     dt1 = (date.today() + timedelta(days=1)).strftime('%d.%m.%Y')
     dt2 = (date.today() + timedelta(days=1)).strftime('%d.%m.%Y')
@@ -17,7 +22,7 @@ def block_1(url, client, template, username1=envs.test_mm_username1, username2=e
     data = {'context': {'acting_user': {'id': test_mm_user1['id'], 'username': test_mm_user1['username'],
                                         'first_name': test_mm_user1['first_name'],
                                         'last_name': test_mm_user1['last_name']}},
-            'values': {'message': msg, 'option': {"label": test_project_rm.name, "value": test_project_rm.identifier}}}
+            'values': {'message': msg, 'option': {"label": test_project_rm.name, "value": proj_iden}}}
 
     response = client.post(url, json=data)
     # delete project's issues
@@ -44,7 +49,7 @@ def block_2(url,
                                     'first_name': test_mm_user1['first_name'], 'last_name': test_mm_user1['last_name']
                                     }
                     },
-        'values': {'project': {'value': project.id, 'label': project.name},
+        'values': {'project': {'value': project.identifier, 'label': project.name},
                    'tracker': {'value': tracker.id},
                    'subject': subject,
                    'description': description,
