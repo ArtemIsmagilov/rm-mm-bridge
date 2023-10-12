@@ -3,7 +3,6 @@ from datetime import date, timedelta
 from jinja2 import Environment, PackageLoader, select_autoescape
 from redminelib import Redmine
 
-import wsgi
 from ext_funcs import choose_name, create_full_name
 from tests.blocks_code import blocks
 from tests.conftest import (
